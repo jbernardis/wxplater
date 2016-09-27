@@ -1,0 +1,5 @@
+flip on x or y axis (increments of 90 degrees)
+
+split multipart stl
+
+see if I can combine stltool.py and the stl class inside of stlviewer - get rid of duplicated code
