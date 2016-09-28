@@ -100,7 +100,7 @@ class PlaterFrame(wx.Frame):
 		self.bExport.Enable(False)
 		
 		self.bView = wx.BitmapButton(self, wx.ID_ANY, self.images.pngView, size=BUTTONDIM)
-		self.bView.SetToolTipString("View the currently selected file")
+		self.bView.SetToolTipString("View the currently selected object")
 		self.Bind(wx.EVT_BUTTON, self.doView, self.bView)
 		self.bView.Enable(False)
 		

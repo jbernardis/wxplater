@@ -13,22 +13,22 @@ class MirrorDlg(wx.Dialog):
 		
 		bX = wx.BitmapButton(self, wx.ID_ANY, images.pngXaxis, size=BUTTONDIM)
 		self.Bind(wx.EVT_BUTTON, self.onbX, bX)
-		bX.SetToolTipString("Mirror on X Axis")
+		bX.SetToolTipString("Mirror on YZ plane")
 		sizer.Add(bX)
 		
 		bY = wx.BitmapButton(self, wx.ID_ANY, images.pngYaxis, size=BUTTONDIM)
 		self.Bind(wx.EVT_BUTTON, self.onbY, bY)
-		bY.SetToolTipString("Mirror on Y Axis")
+		bY.SetToolTipString("Mirror on XZ plane")
 		sizer.Add(bY)
 		
 		bZ = wx.BitmapButton(self, wx.ID_ANY, images.pngZaxis, size=BUTTONDIM)
 		self.Bind(wx.EVT_BUTTON, self.onbZ, bZ)
-		bZ.SetToolTipString("Mirror on Z Axis")
+		bZ.SetToolTipString("Mirror on XY plane")
 		sizer.Add(bZ)
 		
-		bCancel = wx.BitmapButton(self, wx.ID_ANY, images.pngCancel, size=BUTTONDIM)
+		bCancel = wx.BitmapButton(self, wx.ID_ANY, images.pngExit, size=BUTTONDIM)
 		self.Bind(wx.EVT_BUTTON, self.onbCancel, bCancel)
-		bCancel.SetToolTipString("Cancel Mirror Operation")
+		bCancel.SetToolTipString("Dismiss dialog")
 		sizer.AddSpacer((20, 20))
 		sizer.Add(bCancel)
 		
