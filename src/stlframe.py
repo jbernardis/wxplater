@@ -151,6 +151,13 @@ class Hull:
 		
 		self.ptsWorld = self.stlObj.hull
 		self.ptsScreen = [worldToScreen(x[0], x[1]) for x in self.stlObj.hull]
+		
+	def xyRotate(self, xa, ya):
+		self.stlObj.applyDeltas()
+		self.stlObj.rotatexy(xa, ya)
+		
+		self.ptsWorld = self.stlObj.hull
+		self.ptsScreen = [worldToScreen(x[0], x[1]) for x in self.stlObj.hull]
 					
 dk_Gray = wx.Colour(224, 224, 224)
 lt_Gray = wx.Colour(128, 128, 128)
@@ -166,7 +173,7 @@ class StlFrame (wx.Window):
 		buildarea = self.settings.buildarea
 		scale = self.settings.scale
 		
-		self.startPos = [0, 0]
+		self.startPos = None
 		self.hulls = []
 		self.selectedSeq = None
 		self.selectedHull = None
@@ -277,11 +284,12 @@ class StlFrame (wx.Window):
 		self.refresh()
 		
 	def onLeftUp(self, evt):
+		self.startPos = None
 		if self.HasCapture():
 			self.ReleaseMouse()
 			
 	def onMotion(self, evt):
-		if evt.Dragging() and evt.LeftIsDown():
+		if evt.Dragging() and evt.LeftIsDown() and self.startPos != None:
 			pos = evt.GetPositionTuple()
 			x, y = screenToWorld(pos[0], pos[1])
 			dx = x - self.startPos[0]
@@ -346,6 +354,14 @@ class StlFrame (wx.Window):
 		
 		self.selectedHull.commitDeltas()
 		self.selectedHull.xyMirror()
+		self.refresh()
+		
+	def xyRotate(self, xa, ya):
+		if self.selectedHull is None:
+			return
+		
+		self.selectedHull.commitDeltas()
+		self.selectedHull.xyRotate(xa, ya)
 		self.refresh()
 		
 	def centerPlate(self):

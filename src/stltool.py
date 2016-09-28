@@ -136,14 +136,21 @@ class stl:
 
 			self.setHull()
 			self.normalize()
+			
+	def setName(self, name):
+		self.name = name
 	
 	def setHull(self):
 		self.projection = numpy.array([])
 		self.minz = 99999
+		self.maxz = -99999
 		for f in self.facets:
 			if f[1][0][2] < self.minz: self.minz = f[1][0][2]
 			if f[1][1][2] < self.minz: self.minz = f[1][1][2]
 			if f[1][2][2] < self.minz: self.minz = f[1][2][2]
+			if f[1][0][2] > self.maxz: self.maxz = f[1][0][2]
+			if f[1][1][2] > self.maxz: self.maxz = f[1][1][2]
+			if f[1][2][2] > self.maxz: self.maxz = f[1][2][2]
 			if [f[1][0][0], f[1][0][1]] not in self.projection:
 				self.projection=numpy.concatenate((self.projection, [f[1][0][0], f[1][0][1]]))
 			if [f[1][1][0], f[1][1][1]] not in self.projection:
@@ -284,6 +291,16 @@ class stl:
 		
 		self.facets = nf
 		self.setHull()
+		
+	def rotatexy(self, ax, ay):
+		s = self.translate([-self.hxCenter, -self.hyCenter, -self.maxz/2]).rotate([ax, ay, 0]).translate([self.hxCenter, self.hyCenter, 0])
+		self.facets = [f for f in s.facets]
+		self.insolid = s.insolid
+		self.infacet = s.infacet
+		self.inloop = s.inloop
+		self.facetloc = s.facetloc
+		self.setHull()
+		self.setZZero()
 			
 	def translate(self,v=[0,0,0]):
 		matrix=[

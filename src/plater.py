@@ -13,7 +13,7 @@ from stltool import stl, emitstl
 from stlframe import StlFrame
 from settings import Settings
 from stlview import StlViewer, VIEW_MODE_LOAD, VIEW_MODE_LOOK_HERE
-from mirrordlg import MirrorDlg, XAXIS, YAXIS, ZAXIS
+from mirrordlg import MirrorDlg
 from rotatedlg import RotateDlg
 from translatedlg import TranslateDlg
 from scaledlg import ScaleDlg
@@ -224,16 +224,16 @@ class PlaterFrame(wx.Frame):
 		
 	def enableButtons(self):
 		v = (self.files.countFiles() > 0)
-		fn = self.files.getSelection()[0]
+		ud = self.files.getSelection()
 		
-		self.bClone.Enable(v and not fn is None)
-		self.bGrid.Enable(v and not fn is None)
-		self.bDel.Enable(v and not fn is None)
-		self.bView.Enable(v and not fn is None)
-		self.bMirror.Enable(v and not fn is None)
-		self.bRotate.Enable(v and not fn is None)
-		self.bTranslate.Enable(v and not fn is None)
-		self.bScale.Enable(v and not fn is None)
+		self.bClone.Enable(v and not ud is None)
+		self.bGrid.Enable(v and not ud is None)
+		self.bDel.Enable(v and not ud is None)
+		self.bView.Enable(v and not ud is None)
+		self.bMirror.Enable(v and not ud is None)
+		self.bRotate.Enable(v and not ud is None)
+		self.bTranslate.Enable(v and not ud is None)
+		self.bScale.Enable(v and not ud is None)
 		self.bDelall.Enable(v)
 		self.bArrange.Enable(v)
 		self.bCenter.Enable(v)
@@ -280,7 +280,8 @@ class PlaterFrame(wx.Frame):
 			
 			if not self.settings.preview or rc == wx.ID_OK:
 				stlFile = stl(filename = path)
-				self.files.addFile(path, UserData(path, stlFile, self.seq))
+				ud = UserData(path, stlFile, self.seq)
+				self.files.addFile(ud)
 				self.stlCanvas.addHull(stlFile, self.seq)
 				self.seq += 1
 				self.modified = True
@@ -300,15 +301,15 @@ class PlaterFrame(wx.Frame):
 		
 	def clone(self):
 		self.stlCanvas.commitDeltas(None)
-		fn, ud = self.files.getSelection()
-		if fn is None:
+		ud = self.files.getSelection()
+		if ud is None:
 			return
 		
 		mySeq = self.seq
 		self.seq += 1
 		udNew = ud.clone(mySeq)
 		
-		self.files.addFile(fn, udNew)
+		self.files.addFile(udNew)
 		self.stlCanvas.addHull(udNew.getStlObj(), mySeq)
 			
 		self.modified = True
@@ -349,18 +350,12 @@ class PlaterFrame(wx.Frame):
 		
 	def doArrange(self, evt):
 		self.stlCanvas.arrange()
+		self.modified = True
 		
 	def doMirror(self, evt):
-		dlg = MirrorDlg(self, self.images, wx.GetMousePosition())
+		dlg = MirrorDlg(self, self.stlCanvas, self.images, wx.GetMousePosition())
 		rc = dlg.ShowModal()
 		dlg.Destroy()
-		
-		if rc == XAXIS:	
-			self.stlCanvas.yzMirror()
-		elif rc == YAXIS:	
-			self.stlCanvas.xzMirror()
-		elif rc == ZAXIS:	
-			self.stlCanvas.xyMirror()
 			
 	def doRotate(self, evt):
 		dlg = RotateDlg(self, self.stlCanvas, self.images, wx.GetMousePosition())
@@ -379,10 +374,11 @@ class PlaterFrame(wx.Frame):
 		
 	def doCenter(self, evt):
 		self.stlCanvas.centerPlate()
+		self.modified = True
 		
 	def doGrid(self, evt):
-		fn, ud = self.files.getSelection()
-		if fn is None:
+		ud = self.files.getSelection()
+		if ud is None:
 			return
 		
 		masterSeq = ud.getSeqNbr()
@@ -396,6 +392,10 @@ class PlaterFrame(wx.Frame):
 			return
 		
 		copies = rows * cols - 1
+		if copies == 1:
+			return
+		
+		self.modified = True
 		
 		seqNbrs = [masterSeq]
 		for i in range(copies):
@@ -435,10 +435,12 @@ class PlaterFrame(wx.Frame):
 		dlg.Destroy()
 
 	def doView(self, evt):
+		self.viewObject()
+		
+	def viewObject(self):
 		self.stlCanvas.commitDeltas(None)
-		fn, ud = self.files.getSelection()
-		title = "%s (Object %d)" % (fn, ud.getSeqNbr())
-		dlg = StlViewer(self, ud.getStlObj(), title, VIEW_MODE_LOOK_HERE, self.images, self.settings)
+		ud = self.files.getSelection()
+		dlg = StlViewer(self, ud.getStlObj(), ud.getName(), VIEW_MODE_LOOK_HERE, self.images, self.settings)
 		dlg.ShowModal()
 		dlg.Destroy()
 		

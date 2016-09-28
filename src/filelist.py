@@ -1,8 +1,7 @@
 import wx
 
 class FileItem:
-	def __init__(self, fn, userData):
-		self.fn = fn
+	def __init__(self, userData):
 		self.userData = userData
 		
 class FileList(wx.ListBox):
@@ -24,9 +23,9 @@ class FileList(wx.ListBox):
 		if s != wx.NOT_FOUND:
 			self.parent.setHullSelection(self.files[s].userData.getSeqNbr())
 		
-	def addFile(self, fn, userData):
-		self.Append(fn)
-		self.files.append(FileItem(fn, userData))
+	def addFile(self, userData):
+		self.Append(userData.getName())
+		self.files.append(FileItem(userData))
 		self.SetSelection(len(self.files)-1)
 		
 	def getStlObjects(self):
@@ -64,10 +63,10 @@ class FileList(wx.ListBox):
 	def getSelection(self):
 		fx = self.GetSelection()
 		if fx == wx.NOT_FOUND:
-			return None, None
+			return None
 		
 		fi = self.files[fx]
-		return fi.fn, fi.userData
+		return fi.userData
 	
 	def getSelectionIndex(self):
 		return self.GetSelection()

@@ -1,13 +1,12 @@
 import wx
 
 BUTTONDIM = (48, 48)
-XAXIS = 1
-YAXIS = 2
-ZAXIS = 3
 
 
 class MirrorDlg(wx.Dialog):
-	def __init__(self, parent, images, pos):
+	def __init__(self, parent, stlframe, images, pos):
+		self.stlframe = stlframe
+		self.parent = parent
 		wx.Dialog.__init__(self, parent, wx.ID_ANY, "", style=0, pos=pos)
 		sizer = wx.BoxSizer(wx.HORIZONTAL)
 		
@@ -26,24 +25,36 @@ class MirrorDlg(wx.Dialog):
 		bZ.SetToolTipString("Mirror on XY plane")
 		sizer.Add(bZ)
 		
-		bCancel = wx.BitmapButton(self, wx.ID_ANY, images.pngExit, size=BUTTONDIM)
-		self.Bind(wx.EVT_BUTTON, self.onbCancel, bCancel)
-		bCancel.SetToolTipString("Dismiss dialog")
+		bView = wx.BitmapButton(self, wx.ID_ANY, images.pngView, size=BUTTONDIM)
+		self.Bind(wx.EVT_BUTTON, self.onbView, bView)
+		bView.SetToolTipString("3D view of the object")
 		sizer.AddSpacer((20, 20))
-		sizer.Add(bCancel)
+		sizer.Add(bView)
+		
+		bExit = wx.BitmapButton(self, wx.ID_ANY, images.pngExit, size=BUTTONDIM)
+		self.Bind(wx.EVT_BUTTON, self.onbExit, bExit)
+		bExit.SetToolTipString("Dismiss dialog")
+		sizer.AddSpacer((20, 20))
+		sizer.Add(bExit)
 		
 		self.SetSizer(sizer)
 		self.Fit()
 		
 	def onbX(self, evt):
-		self.EndModal(XAXIS)
+		self.stlframe.yzMirror()
+		self.parent.modified = True
 		
 	def onbY(self, evt):
-		self.EndModal(YAXIS)
+		self.stlframe.xzMirror()
+		self.parent.modified = True
 		
 	def onbZ(self, evt):
-		self.EndModal(ZAXIS)
+		self.stlframe.xyMirror()
+		self.parent.modified = True
+				
+	def onbView(self, evt):
+		self.parent.viewObject()
 		
-	def onbCancel(self, evt):
+	def onbExit(self, evt):
 		self.EndModal(wx.ID_CANCEL)
-
+			
