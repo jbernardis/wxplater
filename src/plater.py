@@ -34,6 +34,7 @@ class PlaterFrame(wx.Frame):
 		self.modified = False
 		self.settings = Settings(cmdFolder)
 		wx.Frame.__init__(self, None, -1, "Plater", size=(300, 300))
+		self.Show()
 		self.Bind(wx.EVT_CLOSE, self.onClose)
 		
 		self.images = Images(os.path.join(cmdFolder, "images"))
