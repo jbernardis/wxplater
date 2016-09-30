@@ -24,7 +24,9 @@ BUTTONDIM = (48, 48)
 class StlProxy:
 	pass
 
-
+cv = lambda x,y: ((x[0] == y[0]) or (x[0] == y[1]) or (x[0] == y[2]) or
+				  (x[1] == y[0]) or (x[1] == y[1]) or (x[1] == y[2]) or
+				  (x[2] == y[0]) or (x[2] == y[1]) or (x[2] == y[2]))
 
 class PlaterFrame(wx.Frame):
 
@@ -94,6 +96,11 @@ class PlaterFrame(wx.Frame):
 		self.bScale.SetToolTipString("Scale the selected object")
 		self.Bind(wx.EVT_BUTTON, self.doScale, self.bScale)
 		self.bScale.Enable(False)
+		
+		self.bSplit = wx.BitmapButton(self, wx.ID_ANY, self.images.pngSplit, size=BUTTONDIM)
+		self.bSplit.SetToolTipString("Split the selected object")
+		self.Bind(wx.EVT_BUTTON, self.doSplit, self.bSplit)
+		self.bSplit.Enable(False)
 		
 		self.bExport = wx.BitmapButton(self, wx.ID_ANY, self.images.pngExport, size=BUTTONDIM)
 		self.bExport.SetToolTipString("Export the plate to an STL file")
@@ -176,7 +183,9 @@ class PlaterFrame(wx.Frame):
 		szBtnLn2.AddSpacer(BUTTONDIM)
 		szBtnLn2.Add(self.bClone)
 		szBtnLn2.Add(self.bGrid)
-		szBtnLn2.AddSpacer([BUTTONDIM[0]*3, BUTTONDIM[1]])
+		szBtnLn2.AddSpacer(BUTTONDIM)
+		szBtnLn2.Add(self.bSplit)
+		szBtnLn2.AddSpacer(BUTTONDIM)
 		
 		szBtnLn3.Add(self.bMirror)
 		szBtnLn3.Add(self.bRotate)
@@ -234,6 +243,7 @@ class PlaterFrame(wx.Frame):
 		self.bRotate.Enable(v and not ud is None)
 		self.bTranslate.Enable(v and not ud is None)
 		self.bScale.Enable(v and not ud is None)
+		self.bSplit.Enable(v and not ud is None)
 		self.bDelall.Enable(v)
 		self.bArrange.Enable(v)
 		self.bCenter.Enable(v)
@@ -352,6 +362,9 @@ class PlaterFrame(wx.Frame):
 		self.stlCanvas.arrange()
 		self.modified = True
 		
+	def findUserDataBySeq(self, seq):
+		return self.files.findUserDataBySeq(seq)
+		
 	def doMirror(self, evt):
 		dlg = MirrorDlg(self, self.stlCanvas, self.images, wx.GetMousePosition())
 		rc = dlg.ShowModal()
@@ -402,6 +415,57 @@ class PlaterFrame(wx.Frame):
 			seqNbrs.append(self.clone())
 			
 		self.stlCanvas.gridArrange(seqNbrs, rows, cols)
+		
+	def doSplit(self, evt):
+		ud = self.files.getSelection()
+		if ud is None:
+			return
+		
+		obj = ud.getStlObj()
+		fn = ud.getFn()
+		ofl = [f for f in obj.facets]
+		
+		part = 0
+
+		while len(ofl) > 0:		
+			nf = [ofl.pop(0)]
+			fx = 0
+			while fx < len(nf):
+				nmatchf = []
+				for of in ofl:
+					if cv(nf[fx][1], of[1]):
+						nf.append(of)
+					else:
+						nmatchf.append(of)
+				ofl = nmatchf
+				fx += 1
+				
+			if part == 0 and len(ofl) == 0:
+				dlg = wx.MessageDialog(self,
+					"Object consists of a single mesh",
+					"Cannot Split",
+					wx.OK | wx.ICON_EXCLAMATION)
+				dlg.ShowModal()
+				dlg.Destroy()
+				return
+
+			if part == 0:
+				obj.setFacets(nf)
+				ud.setPart(part)
+				self.files.refreshFilesList(ud.getSeqNbr())
+				self.stlCanvas.refreshHull(ud.getSeqNbr())
+			else:
+				nobj = stl(filename=None)
+				nobj.setFacets(nf)
+				ud = UserData(fn, nobj, self.seq)
+				ud.setPart(part)
+				self.files.addFile(ud)
+				self.stlCanvas.addHull(nobj, self.seq)
+				self.seq += 1
+				
+			part += 1
+			
+		self.modified = True
 		
 	def doExport(self, evt):
 		wildcard = "STL (*.stl)|*.stl"

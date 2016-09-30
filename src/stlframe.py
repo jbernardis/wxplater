@@ -21,11 +21,21 @@ def screenToWorld(ptx, pty):
 class Hull:
 	def __init__(self, stlObj, seq):
 		self.stlObj = stlObj
-		self.ptsWorld = stlObj.hull
-		self.ptsScreen = [worldToScreen(x[0], x[1]) for x in stlObj.hull]
 		self.seq = seq
-		self.transx = self.transy = 0
+		#self.transx = self.transy = 0
+		
+		self.refresh()
 
+	def commitDeltas(self):
+		self.stlObj.applyDeltas()
+		
+		self.ptsWorld = self.stlObj.hull
+		self.ptsScreen = [worldToScreen(x[0], x[1]) for x in self.stlObj.hull]
+		
+	def refresh(self):
+		self.ptsWorld = self.stlObj.hull
+		self.ptsScreen = [worldToScreen(x[0], x[1]) for x in self.stlObj.hull]
+		
 		self.minx = 99999
 		self.maxx = -99999
 		self.miny = 99999
@@ -35,18 +45,12 @@ class Hull:
 			if p[0] < self.minx: self.minx = p[0]
 			if p[1] > self.maxy: self.maxy = p[1]
 			if p[1] < self.miny: self.miny = p[1]
-			
+		
 		self.centerx = (self.maxx + self.minx)/2.0
 		self.centery = (self.maxy + self.miny)/2.0
 		self.width = self.maxx - self.minx
 		self.height = self.maxy - self.miny
 		self.area = self.width * self.height
-
-	def commitDeltas(self):
-		self.stlObj.applyDeltas()
-		
-		self.ptsWorld = self.stlObj.hull
-		self.ptsScreen = [worldToScreen(x[0], x[1]) for x in self.stlObj.hull]
 		
 	def translate(self, dx, dy):
 		self.stlObj.deltaTranslation(dx, dy)
@@ -205,7 +209,7 @@ class StlFrame (wx.Window):
 		if h is None:
 			return
 		
-		self.transx = self.transy = 0
+		#self.transx = self.transy = 0
 		h.commitDeltas()
 			
 	def selectHull(self, h):
@@ -229,6 +233,14 @@ class StlFrame (wx.Window):
 		self.hulls.append(h)
 		self.selectHull(h)
 		self.refresh()
+		
+	def refreshHull(self, seq):
+		h = self.findHullBySeq(seq)
+		if h is None: return
+		
+		h.refresh()
+		self.refresh()
+		
 		
 	def delHull(self, seq):
 		nh = []
@@ -400,7 +412,19 @@ class StlFrame (wx.Window):
 		for h in sorted(self.hulls, cmpobj):
 			x, y = omap.find(h.width+self.settings.arrangemargin*2, h.height+self.settings.arrangemargin*2)
 			if x is None or y is None:
-				print "Plate full",  "Object %s does not fit" % h.stlObj.name
+				ud = self.parent.findUserDataBySeq(h.seq)
+				if ud is None:
+					name = h.stlObj.name
+				else:
+					name = ud.getName()
+					
+				dlg = wx.MessageDialog(self,
+					"Object\n\n%s\n\ndoes not fit." % name,
+					"Plate is full",
+					wx.OK | wx.ICON_EXCLAMATION)
+				dlg.ShowModal()
+				dlg.Destroy()
+
 			else:
 				dx = x - h.centerx + h.width/2 + self.settings.arrangemargin
 				dy = y - h.centery + h.height/2 + self.settings.arrangemargin

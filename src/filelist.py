@@ -28,6 +28,12 @@ class FileList(wx.ListBox):
 		self.files.append(FileItem(userData))
 		self.SetSelection(len(self.files)-1)
 		
+	def refreshFilesList(self, seq):
+		for fx in range(len(self.files)):
+			if self.files[fx].userData.getSeqNbr() == seq:
+				self.SetString(fx, self.files[fx].userData.getName())
+				break
+		
 	def getStlObjects(self):
 		objs = []
 		for f in self.files:
@@ -50,6 +56,13 @@ class FileList(wx.ListBox):
 		if fx < 0 or fx >= len(self.files):
 			return None
 		return self.files[fx].userData
+	
+	def findUserDataBySeq(self, seq):
+		for fi in self.files:
+			if fi.userData.getSeqNbr() == seq:
+				return fi.userData
+			
+		return None
 	
 	def setSelection(self, seq):
 		for fx in range(len(self.files)):

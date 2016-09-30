@@ -7,11 +7,10 @@ class UserData:
 		self.formObjectName()
 		
 	def formObjectName(self):
-		self.name = "%s (Object %d" % (self.fn, self.seq)
-		if self.part is None:
-			self.name += ")"
-		else:
-			self.name += " - Part %s)" % self.part
+		self.name = self.fn
+		if not self.part is None:
+			self.name += " - Part %s " % self.part
+		self.name += " (Object %d)" % self.seq
 			
 	def setPart(self, part):
 		self.part = part
@@ -20,12 +19,18 @@ class UserData:
 	def getName(self):
 		return self.name
 		
+	def getFn(self):
+		return self.fn
+		
 	def clone(self, seq):
 		s = self.stlObj.clone()
 		return UserData(self.fn, s, seq)
 	
 	def getStlObj(self):
 		return self.stlObj
+	
+	def setStlObj(self, stlObj):
+		self.stlObj = stlObj
 		
 	def getSeqNbr(self):
 		return self.seq

@@ -137,6 +137,10 @@ class stl:
 			self.setHull()
 			self.normalize()
 			
+	def setFacets(self, facets):
+		self.facets = facets
+		self.setHull()
+			
 	def setName(self, name):
 		self.name = name
 	

@@ -1,5 +1,3 @@
-split multipart stl
+Move split logic into a thread, and disable ALL buttons until thread is completed
 
-see if I can combine stltool.py and the stl class inside of stlviewer - get rid of duplicated code
 
-need to present a message box when the plate is full - currently printing a message
