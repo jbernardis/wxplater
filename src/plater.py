@@ -1,6 +1,8 @@
 import wx
+import wx.lib.newevent
 import os
 import sys, inspect
+import thread
 
 cmdFolder = os.path.realpath(os.path.abspath(os.path.split(inspect.getfile( inspect.currentframe() ))[0]))
 if cmdFolder not in sys.path:
@@ -28,8 +30,48 @@ cv = lambda x,y: ((x[0] == y[0]) or (x[0] == y[1]) or (x[0] == y[2]) or
 				  (x[1] == y[0]) or (x[1] == y[1]) or (x[1] == y[2]) or
 				  (x[2] == y[0]) or (x[2] == y[1]) or (x[2] == y[2]))
 
-class PlaterFrame(wx.Frame):
+(SplitEvent, EVT_SPLIT_UPDATE) = wx.lib.newevent.NewEvent()
+SPLIT_NEXT_OBJECT = 1
+SPLIT_LAST_OBJECT = 2
 
+class SplitThread:
+	def __init__(self, win, obj):
+		self.win = win
+		self.obj = obj
+		self.ofl = [f for f in self.obj.facets]
+		self.running = False
+
+	def Start(self):
+		self.running = True
+		thread.start_new_thread(self.Run, ())
+
+	def Run(self):
+		while self.running:
+			nf = self.nextObject()
+			if len(self.ofl) == 0:
+				evt = SplitEvent(state = SPLIT_LAST_OBJECT, facets=nf)
+				self.running = False
+			else:
+				evt = SplitEvent(state = SPLIT_NEXT_OBJECT, facets=nf)
+			wx.PostEvent(self.win, evt)	
+		
+	def nextObject(self):
+		nf = [self.ofl.pop(0)]
+		fx = 0
+		while fx < len(nf):
+			nmatchf = []
+			for of in self.ofl:
+				if cv(nf[fx][1], of[1]):
+					nf.append(of)
+				else:
+					nmatchf.append(of)
+			self.ofl = nmatchf
+			fx += 1
+		
+		return nf
+
+
+class PlaterFrame(wx.Frame):
 	def __init__(self):
 		self.t = 0
 		self.seq = 0
@@ -38,6 +80,7 @@ class PlaterFrame(wx.Frame):
 		wx.Frame.__init__(self, None, -1, "Plater", size=(300, 300))
 		self.Show()
 		self.Bind(wx.EVT_CLOSE, self.onClose)
+		self.Bind(EVT_SPLIT_UPDATE, self.splitUpdate)
 		
 		self.images = Images(os.path.join(cmdFolder, "images"))
 		
@@ -235,6 +278,7 @@ class PlaterFrame(wx.Frame):
 		v = (self.files.countFiles() > 0)
 		ud = self.files.getSelection()
 		
+		self.bAdd.Enable(True)
 		self.bClone.Enable(v and not ud is None)
 		self.bGrid.Enable(v and not ud is None)
 		self.bDel.Enable(v and not ud is None)
@@ -249,6 +293,23 @@ class PlaterFrame(wx.Frame):
 		self.bCenter.Enable(v)
 		self.bExport.Enable(v)
 		self.bViewPlate.Enable(v)
+		
+	def disableButtons(self):
+		self.bAdd.Enable(False)
+		self.bClone.Enable(False)
+		self.bGrid.Enable(False)
+		self.bDel.Enable(False)
+		self.bView.Enable(False)
+		self.bMirror.Enable(False)
+		self.bRotate.Enable(False)
+		self.bTranslate.Enable(False)
+		self.bScale.Enable(False)
+		self.bSplit.Enable(False)
+		self.bDelall.Enable(False)
+		self.bArrange.Enable(False)
+		self.bCenter.Enable(False)
+		self.bExport.Enable(False)
+		self.bViewPlate.Enable(False)
 		
 	def onScMargin(self, evt):
 		self.settings.arrangemargin = self.scMargin.GetValue()
@@ -420,52 +481,54 @@ class PlaterFrame(wx.Frame):
 		ud = self.files.getSelection()
 		if ud is None:
 			return
-		
+	
+		self.disableButtons()	
 		obj = ud.getStlObj()
-		fn = ud.getFn()
-		ofl = [f for f in obj.facets]
+		self.part = 0
+		self.partfn = ud.getFn()
+		self.splitter = SplitThread(self, obj)
+		self.splitter.Start()
 		
-		part = 0
-
-		while len(ofl) > 0:		
-			nf = [ofl.pop(0)]
-			fx = 0
-			while fx < len(nf):
-				nmatchf = []
-				for of in ofl:
-					if cv(nf[fx][1], of[1]):
-						nf.append(of)
-					else:
-						nmatchf.append(of)
-				ofl = nmatchf
-				fx += 1
-				
-			if part == 0 and len(ofl) == 0:
+	def splitUpdate(self, evt):
+		finished = False
+		if evt.state == SPLIT_LAST_OBJECT:
+			finished = True
+			if self.part == 0:
 				dlg = wx.MessageDialog(self,
 					"Object consists of a single mesh",
 					"Cannot Split",
 					wx.OK | wx.ICON_EXCLAMATION)
 				dlg.ShowModal()
 				dlg.Destroy()
+				self.splitter = None
+				self.enableButtons()
 				return
-
-			if part == 0:
-				obj.setFacets(nf)
-				ud.setPart(part)
-				self.files.refreshFilesList(ud.getSeqNbr())
-				self.stlCanvas.refreshHull(ud.getSeqNbr())
-			else:
-				nobj = stl(filename=None)
-				nobj.setFacets(nf)
-				ud = UserData(fn, nobj, self.seq)
-				ud.setPart(part)
-				self.files.addFile(ud)
-				self.stlCanvas.addHull(nobj, self.seq)
-				self.seq += 1
-				
-			part += 1
 			
-		self.modified = True
+		nf = evt.facets
+		if self.part == 0:
+			ud = self.files.getSelection()
+			ud.getStlObj().setFacets(nf)
+			ud.setPart(self.part)
+			self.files.refreshFilesList(ud.getSeqNbr())
+			self.stlCanvas.refreshHull(ud.getSeqNbr())
+		else:
+			nobj = stl(filename=None)
+			nobj.setFacets(nf)
+			ud = UserData(self.partfn, nobj, self.seq)
+			ud.setPart(self.part)
+			self.files.addFile(ud)
+			self.stlCanvas.addHull(nobj, self.seq)
+			self.seq += 1
+			
+		self.part += 1
+		
+		if finished:
+			self.modified = True
+			self.splitter = None
+			self.enableButtons()
+		else:
+			self.disableButtons()
+
 		
 	def doExport(self, evt):
 		wildcard = "STL (*.stl)|*.stl"
