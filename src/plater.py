@@ -168,7 +168,7 @@ class PlaterFrame(wx.Frame):
 		self.cbCenterOnArrange.SetValue(self.settings.centeronarrange)
 		self.Bind(wx.EVT_CHECKBOX, self.onCbCenterOnArrange, self.cbCenterOnArrange)
 		
-		self.strategyList = ['column', 'row']
+		self.strategyList = ['column', 'row', 'spiral']
 		self.rbStrategy = wx.RadioBox(
 				self, -1, "Arrange Strategy", wx.DefaultPosition, wx.DefaultSize,
 				self.strategyList, 1, wx.RA_SPECIFY_COLS
@@ -540,6 +540,8 @@ class PlaterFrame(wx.Frame):
 		rc = dlg.ShowModal()
 		if rc == wx.ID_OK:
 			path = dlg.GetPath()
+			if os.path.splitext(path)[1].tolower() != ".stl":
+				path += ".stl"
 			
 		dlg.Destroy()
 		if rc != wx.ID_OK:

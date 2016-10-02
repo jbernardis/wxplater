@@ -1,3 +1,51 @@
+def validPt(x, y, tx, ty, nx, ny):
+	if x < 0 or y < 0:
+		return False
+	if x > tx-nx or y > ty-ny:
+		return False
+	
+	return True
+
+def spiral(needx, needy, totalx, totaly):
+	cx = totalx/2
+	cy = totaly/2
+	loops = max(cx, cy) + 1
+	
+	if validPt(cx, cy, totalx, totaly, needx, needy):
+		yield cx, cy
+	
+	for d in range(1, loops):
+		for dx in range(-d, d):
+			if validPt(cx+dx, cy+d, totalx, totaly, needx, needy):
+				yield cx+dx, cy+d
+			
+		for dy in range(d, -d, -1):
+			if validPt(cx+d, cy+dy, totalx, totaly, needx, needy):
+				yield cx+d, cy+dy
+			
+		for dx in range(d, -d, -1):
+			if validPt(cx+dx, cy-d, totalx, totaly, needx, needy):
+				yield cx+dx, cy-d
+			
+		for dy in range(-d, d):
+			if validPt(cx-d, cy+dy, totalx, totaly, needx, needy):
+				yield cx-d, cy+dy
+
+def row(needx, needy, totalx, totaly):
+	by = totaly - needy
+	bx = totalx - needx
+	for y in range(by):
+		for x in range(bx):
+			yield x,y
+
+def column(needx, needy, totalx, totaly):
+	by = totaly - needy
+	bx = totalx - needx
+	for x in range(bx):
+		for y in range(by):
+			yield x,y
+
+
 class Map:
 	def __init__(self, buildarea, strategy):
 		self.width = int(buildarea[0])
@@ -14,20 +62,24 @@ class Map:
 	def fits(self, x, y, width, height):
 		for dx in range(int(width)):
 			for dy in range(int(height)):
-				if self.map[x+dx][y+dy] != 0:
+				try:
+					if self.map[x+dx][y+dy] != 0:
+						return False
+				except:
 					return False
 		return True
+	
 					
 	def find(self, width, height):
 		if self.strategy == "row":
-			for y in range(int(self.height-height)):
-				for x in range(int(self.width-width)):
-					if self.fits(x, y, width, height):
-						return (x,y)
+			gen = row
+		elif self.strategy == "spiral":
+			gen = spiral
 		else: # strategy assumed to be "column"
-			for x in range(int(self.width-width)):
-				for y in range(int(self.height-height)):
-					if self.fits(x, y, width, height):
-						return (x,y)
+			gen = column
+			
+		for x,y in gen(int(width), int(height), self.width, self.height):
+			if self.fits(x, y, width, height):
+				return (x,y)
 
 		return (None, None)
