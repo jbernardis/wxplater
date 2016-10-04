@@ -539,8 +539,8 @@ class PlaterFrame(wx.Frame):
 		
 		rc = dlg.ShowModal()
 		if rc == wx.ID_OK:
-			path = dlg.GetPath()
-			if os.path.splitext(path)[1].tolower() != ".stl":
+			path = dlg.GetPath().encode('ascii','ignore')
+			if os.path.splitext(path)[1].lower() != ".stl":
 				path += ".stl"
 			
 		dlg.Destroy()
