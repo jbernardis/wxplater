@@ -79,6 +79,11 @@ class PlaterFrame(wx.Frame):
 		self.settings = Settings(cmdFolder)
 		wx.Frame.__init__(self, None, -1, "Plater", size=(300, 300))
 		self.Show()
+		
+		icon = wx.EmptyIcon()
+		icon.CopyFromBitmap(wx.Bitmap("images/plater.ico", wx.BITMAP_TYPE_ANY))
+		self.SetIcon(icon)
+		
 		self.Bind(wx.EVT_CLOSE, self.onClose)
 		self.Bind(EVT_SPLIT_UPDATE, self.splitUpdate)
 		
