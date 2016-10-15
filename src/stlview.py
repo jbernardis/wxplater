@@ -382,9 +382,11 @@ class StlViewer(wx.Dialog):
 		self.settings.spinstlview = f
 		
 	def onLoad(self, evt):
+		self.gl.Destroy()
 		self.EndModal(wx.ID_OK)
 		
 	def onDontLoad(self, evt):
+		self.gl.Destroy()
 		self.EndModal(wx.ID_CANCEL)
 		
 
