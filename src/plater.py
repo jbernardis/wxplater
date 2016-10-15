@@ -81,7 +81,8 @@ class PlaterFrame(wx.Frame):
 		self.Show()
 		
 		icon = wx.EmptyIcon()
-		icon.CopyFromBitmap(wx.Bitmap("images/plater.ico", wx.BITMAP_TYPE_ANY))
+		iconfn = os.path.join(cmdFolder, "images", "plater.ico")
+		icon.CopyFromBitmap(wx.Bitmap(iconfn, wx.BITMAP_TYPE_ANY))
 		self.SetIcon(icon)
 		
 		self.Bind(wx.EVT_CLOSE, self.onClose)
