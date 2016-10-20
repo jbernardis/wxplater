@@ -84,7 +84,9 @@ def emitstl(filename,facets=[],objname="stltool_export",binary=False):
 		f.write("  endfacet"+"\n")
 	f.write("endsolid "+objname+"\n")
 	f.close()
-		
+
+def is_ascii(s):
+	return all(ord(c) < 128 for c in s)		
 		
 class stl:
 	def __init__(self, filename=None, name=None):
@@ -105,7 +107,7 @@ class stl:
 		self.filename = filename
 		if filename is not None:
 			self.f=list(open(filename))
-			if not self.f[0].startswith("solid"):
+			if not is_ascii(self.f[0]):
 				f=open(filename,"rb")
 				buf=f.read(84)
 				while(len(buf)<84):
