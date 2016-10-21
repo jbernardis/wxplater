@@ -404,7 +404,10 @@ def genfacet(v):
 	return [normal,v]
 
 def is_ascii(s):
-	return all(ord(c) < 128 for c in s)		
+	if not all(ord(c) < 128 for c in s):
+		return False
+	
+	return s.startswith("solid")	
 		
 class stl:
 	def __init__(self, filename=None, name=None):
