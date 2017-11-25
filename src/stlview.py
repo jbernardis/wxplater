@@ -6,12 +6,10 @@ from OpenGL.GL import *
 from OpenGL.GLU import *
 from OpenGL.arrays import vbo
 
-VIEW_MODE_LOAD = 0
-VIEW_MODE_LOOK = 1
-VIEW_MODE_LOOK_HERE = 2
-		
 import struct, math
 import numpy as np
+
+import pprint
 
 BUTTONDIM = (48,48)
 
@@ -76,10 +74,12 @@ class StlCanvas(glcanvas.GLCanvas):
 
 	def OnSize(self, event):
 		size = self.size = self.GetClientSize()
-		if self.GetContext():
-			if self.IsShown() and self.GetParent().IsShown():
+		if (self.GetParent().IsShown()):
+			if (self.context is not None):
 				self.SetCurrent(self.context)
-				glViewport(0, 0, size.width, size.height)
+			else:
+				self.SetCurrent()
+			glViewport(0, 0, size.width, size.height)
 		event.Skip()
 
 	def OnPaint(self, event):
@@ -305,7 +305,12 @@ class StlCanvas(glcanvas.GLCanvas):
 		glEnableClientState(GL_NORMAL_ARRAY)
 		glNormalPointer(GL_FLOAT, 0, self.normalPositions);
 
-		glDrawArrays(GL_TRIANGLES, 0, len(self.vertices));
+		try:
+			glDrawArrays(GL_TRIANGLES, 0, len(self.vertices));
+		except Exception as e:
+			print "Exception from drawarrays"
+			pprint.pprint(e)
+			print "================================================================"
 				
 		self.SwapBuffers()
 		
@@ -318,34 +323,33 @@ class StlCanvas(glcanvas.GLCanvas):
 		
 
 class StlViewer(wx.Dialog):
-	def __init__(self, parent, fn, title, mode, images, settings):
+	def __init__(self, parent, stlObj, title, loading, images, settings):
 		self.settings = settings
-		self.mode = mode
 		wx.Dialog.__init__(self, parent, wx.ID_ANY, title, size=(200,200), style=wx.CAPTION)
 		
 		self.gl = StlCanvas(self, buildarea=self.settings.buildarea)
 		sizer = wx.BoxSizer(wx.VERTICAL)
-		sizer.AddSpacer((10, 10))
+		sizer.AddSpacer(10)
 		csizer = wx.BoxSizer(wx.HORIZONTAL)
-		csizer.AddSpacer((10, 10))
+		csizer.AddSpacer(10)
 		csizer.Add(self.gl)
-		csizer.AddSpacer((10, 10))
+		csizer.AddSpacer(10)
 		sizer.Add(csizer)
-		sizer.AddSpacer((10, 10))
+		sizer.AddSpacer(10)
 		
 		bsizer = wx.BoxSizer(wx.HORIZONTAL)
-		bsizer.AddSpacer((20, 10))
+		bsizer.AddSpacer(20)
 		
 		self.bOK = wx.BitmapButton(self, wx.ID_ANY, images.pngOk, size=BUTTONDIM)
-		if self.mode == VIEW_MODE_LOAD:
-			self.bOK.SetToolTipString("Load the STL file")
+		if loading:
+			self.bOK.SetToolTip("Load the STL file")
 		else:
-			self.bOK.SetToolTipString("Dismiss dialog box")
+			self.bOK.SetToolTip("Dismiss dialog box")
 		self.Bind(wx.EVT_BUTTON, self.onLoad, self.bOK)
 		bsizer.Add(self.bOK)
 		
-		#bsizer.AddSpacer((600-BUTTONDIM[0]*2-20, 10))
-		bsizer.AddSpacer((220, 10))
+		#bsizer.AddSpacer(600-BUTTONDIM[0]*2-20)
+		bsizer.AddSpacer(220)
 		
 		self.cbSpin = wx.CheckBox(self, wx.ID_ANY, "Spin")
 		f = self.settings.spinstlview
@@ -354,26 +358,23 @@ class StlViewer(wx.Dialog):
 		self.Bind(wx.EVT_CHECKBOX, self.onCbSpin, self.cbSpin)
 		bsizer.Add(self.cbSpin)
 		
-		bsizer.AddSpacer((220, 10))
+		bsizer.AddSpacer(220)
 		
-		if self.mode == VIEW_MODE_LOAD:
+		if loading:
 			self.bCancel = wx.BitmapButton(self, wx.ID_ANY, images.pngCancel, size=BUTTONDIM)
-			self.bCancel.SetToolTipString("Do not load the STL file")
+			self.bCancel.SetToolTip("Do not load the STL file")
 			self.Bind(wx.EVT_BUTTON, self.onDontLoad, self.bCancel)
 			bsizer.Add(self.bCancel)
 		
 		sizer.Add(bsizer)
 
-		sizer.AddSpacer((10, 10))
+		sizer.AddSpacer(10)
 		
 		self.SetSizer(sizer)
 		self.Layout()
 		self.Fit()
-		if self.mode in [ VIEW_MODE_LOAD, VIEW_MODE_LOOK ]:
-			stlObj = stl(filename=fn)
-		else: # self.mode == VIEW_MODE_LOOK_HERE
-			stlObj = fn
-			self.gl.setOriginAtCenter(False)
+		
+		self.gl.setOriginAtCenter(False)
 		self.gl.setStlObject(stlObj)
 		
 	def onCbSpin(self, evt):
@@ -382,11 +383,13 @@ class StlViewer(wx.Dialog):
 		self.settings.spinstlview = f
 		
 	def onLoad(self, evt):
-		self.gl.Destroy()
+		self.gl.setSpin(False)
+		self.gl.stopTimer()
 		self.EndModal(wx.ID_OK)
 		
 	def onDontLoad(self, evt):
-		self.gl.Destroy()
+		self.gl.setSpin(False)
+		self.gl.stopTimer()
 		self.EndModal(wx.ID_CANCEL)
 		
 
@@ -496,7 +499,7 @@ class stl:
 		elif l.startswith("endfacet"):
 			self.infacet=0
 			self.facets+=[self.facet]
-			facet=self.facet
+			#facet=self.facet
 		elif l.startswith("vertex"):
 			l=l.replace(",",".")
 			self.facet[1][self.facetloc]=map(float,l.split()[1:])

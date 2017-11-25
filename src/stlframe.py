@@ -34,8 +34,10 @@ class Hull:
 		
 	def refresh(self):
 		self.ptsWorld = self.stlObj.hull
-		self.ptsScreen = [worldToScreen(x[0], x[1]) for x in self.stlObj.hull]
+		self.ptsScreen = [worldToScreen(x[0], x[1]) for x in self.ptsWorld]
+		self.recalculate()
 		
+	def recalculate(self):
 		self.minx = 99999
 		self.maxx = -99999
 		self.miny = 99999
@@ -93,6 +95,7 @@ class Hull:
 		self.centery = (self.maxy + self.miny)/2.0
 		self.width = self.maxx - self.minx
 		self.height = self.maxy - self.miny
+		self.area = self.width * self.height
 		
 	def translatexy(self, dx, dy):
 		self.stlObj.deltaTranslation(dx, dy)
@@ -116,18 +119,16 @@ class Hull:
 		self.centery = (self.maxy + self.miny)/2.0
 		self.width = self.maxx - self.minx
 		self.height = self.maxy - self.miny
+		self.area = self.width * self.height
 		
 	def scalexyz(self, sx, sy, sz):
 		self.stlObj.applyDeltas()
 		self.stlObj.scalexyz(sx, sy, sz)
 		
 		self.ptsWorld = self.stlObj.hull
-		self.ptsScreen = [worldToScreen(x[0], x[1]) for x in self.stlObj.hull]
+		self.ptsScreen = [worldToScreen(x[0], x[1]) for x in self.ptsWorld]
 		
-		self.minx = self.stlObj.minx
-		self.maxx = self.stlObj.maxx
-		self.miny = self.stlObj.miny
-		self.maxy = self.stlObj.maxy
+		self.recalculate()
 		
 	def yzMirror(self):
 		self.stlObj.applyDeltas()
@@ -136,8 +137,7 @@ class Hull:
 		self.ptsWorld = self.stlObj.hull
 		self.ptsScreen = [worldToScreen(x[0], x[1]) for x in self.stlObj.hull]
 		
-		self.minx = self.stlObj.minx
-		self.maxx = self.stlObj.maxx
+		self.recalculate()
 		
 	def xzMirror(self):
 		self.stlObj.applyDeltas()
@@ -146,8 +146,7 @@ class Hull:
 		self.ptsWorld = self.stlObj.hull
 		self.ptsScreen = [worldToScreen(x[0], x[1]) for x in self.stlObj.hull]
 		
-		self.miny = self.stlObj.miny
-		self.maxy = self.stlObj.maxy
+		self.recalculate()
 		
 	def xyMirror(self):
 		self.stlObj.applyDeltas()
@@ -155,6 +154,7 @@ class Hull:
 		
 		self.ptsWorld = self.stlObj.hull
 		self.ptsScreen = [worldToScreen(x[0], x[1]) for x in self.stlObj.hull]
+		self.recalculate()
 		
 	def xyRotate(self, xa, ya):
 		self.stlObj.applyDeltas()
@@ -162,6 +162,8 @@ class Hull:
 		
 		self.ptsWorld = self.stlObj.hull
 		self.ptsScreen = [worldToScreen(x[0], x[1]) for x in self.stlObj.hull]
+		
+		self.recalculate()
 					
 dk_Gray = wx.Colour(224, 224, 224)
 lt_Gray = wx.Colour(128, 128, 128)
@@ -272,7 +274,7 @@ class StlFrame (wx.Window):
 		return matchHull
 		
 	def onLeftDown(self, evt):
-		pos = evt.GetPositionTuple()
+		pos = evt.GetPosition()
 		x, y = screenToWorld(pos[0], pos[1])
 		self.startPos = [x, y]
 		h = self.findClosest(x, y)
@@ -289,7 +291,7 @@ class StlFrame (wx.Window):
 		if self.selectedHull is None:
 			return
 		
-		pos = evt.GetPositionTuple()
+		pos = evt.GetPosition()
 		x, y = screenToWorld(pos[0], pos[1])
 		h = self.selectedHull
 		h.translate(x-h.centerx, y-h.centery)
@@ -302,7 +304,7 @@ class StlFrame (wx.Window):
 			
 	def onMotion(self, evt):
 		if evt.Dragging() and evt.LeftIsDown() and self.startPos != None:
-			pos = evt.GetPositionTuple()
+			pos = evt.GetPosition()
 			x, y = screenToWorld(pos[0], pos[1])
 			dx = x - self.startPos[0]
 			dy = y - self.startPos[1]
@@ -473,7 +475,7 @@ class StlFrame (wx.Window):
 		
 	def initBuffer(self):
 		w, h = self.GetClientSize();
-		self.buffer = wx.EmptyBitmap(w, h)
+		self.buffer = wx.Bitmap(w, h)
 		self.refresh()
 		
 	def refresh(self):

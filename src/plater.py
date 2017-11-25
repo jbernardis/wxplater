@@ -1,12 +1,10 @@
-import wx
+#import wx
 import wx.lib.newevent
 import os
-import sys, inspect
+import inspect
 import thread
 
 cmdFolder = os.path.realpath(os.path.abspath(os.path.split(inspect.getfile( inspect.currentframe() ))[0]))
-if cmdFolder not in sys.path:
-	sys.path.insert(0, cmdFolder)
 
 from images import Images
 from filelist import FileList	
@@ -14,7 +12,7 @@ from userdata import UserData
 from stltool import stl, emitstl
 from stlframe import StlFrame
 from settings import Settings
-from stlview import StlViewer, VIEW_MODE_LOAD, VIEW_MODE_LOOK_HERE
+from stlview import StlViewer
 from mirrordlg import MirrorDlg
 from rotatedlg import RotateDlg
 from translatedlg import TranslateDlg
@@ -70,20 +68,18 @@ class SplitThread:
 		
 		return nf
 
-
-class PlaterFrame(wx.Frame):
+class PlaterDlg(wx.Frame):
 	def __init__(self):
+		wx.Frame.__init__(self, None, wx.ID_ANY, 'Plater', size=(600, 600))
 		self.t = 0
 		self.seq = 0
 		self.modified = False
 		self.settings = Settings(cmdFolder)
-		wx.Frame.__init__(self, None, -1, "Plater", size=(300, 300))
 		self.Show()
+		ico = wx.Icon(os.path.join(cmdFolder, "images", "platerico.png"), wx.BITMAP_TYPE_PNG)
+		self.SetIcon(ico)
 		
-		icon = wx.EmptyIcon()
-		iconfn = os.path.join(cmdFolder, "images", "plater.ico")
-		icon.CopyFromBitmap(wx.Bitmap(iconfn, wx.BITMAP_TYPE_ANY))
-		self.SetIcon(icon)
+		self.savedfile = None
 		
 		self.Bind(wx.EVT_CLOSE, self.onClose)
 		self.Bind(EVT_SPLIT_UPDATE, self.splitUpdate)
@@ -93,76 +89,76 @@ class PlaterFrame(wx.Frame):
 		self.stlCanvas = StlFrame(self, self.settings)
 		
 		self.bAdd = wx.BitmapButton(self, wx.ID_ANY, self.images.pngAdd, size=BUTTONDIM)
-		self.bAdd.SetToolTipString("Add an STL file to the plate")
+		self.bAdd.SetToolTip("Add an STL file to the plate")
 		self.Bind(wx.EVT_BUTTON, self.doAdd, self.bAdd)
 		
 		self.bClone = wx.BitmapButton(self, wx.ID_ANY, self.images.pngClone, size=BUTTONDIM)
-		self.bClone.SetToolTipString("Add a copy of the selected object")
+		self.bClone.SetToolTip("Add a copy of the selected object")
 		self.Bind(wx.EVT_BUTTON, self.doClone, self.bClone)
 		self.bClone.Enable(False)
 		
 		self.bDel = wx.BitmapButton(self, wx.ID_ANY, self.images.pngDel, size=BUTTONDIM)
-		self.bDel.SetToolTipString("Delete the selected object from the plate")
+		self.bDel.SetToolTip("Delete the selected object from the plate")
 		self.Bind(wx.EVT_BUTTON, self.doDel, self.bDel)
 		self.bDel.Enable(False)
 		
 		self.bDelall = wx.BitmapButton(self, wx.ID_ANY, self.images.pngDelall, size=BUTTONDIM)
-		self.bDelall.SetToolTipString("Delete ALL objects from the plate")
+		self.bDelall.SetToolTip("Delete ALL objects from the plate")
 		self.Bind(wx.EVT_BUTTON, self.doDelall, self.bDelall)
 		self.bDelall.Enable(False)
 		
 		self.bArrange = wx.BitmapButton(self, wx.ID_ANY, self.images.pngArrange, size=BUTTONDIM)
-		self.bArrange.SetToolTipString("Arrange the objects on the plate")
+		self.bArrange.SetToolTip("Arrange the objects on the plate")
 		self.Bind(wx.EVT_BUTTON, self.doArrange, self.bArrange)
 		self.bArrange.Enable(False)
 		
 		self.bCenter = wx.BitmapButton(self, wx.ID_ANY, self.images.pngCenter, size=BUTTONDIM)
-		self.bCenter.SetToolTipString("Center the plate")
+		self.bCenter.SetToolTip("Center the plate")
 		self.Bind(wx.EVT_BUTTON, self.doCenter, self.bCenter)
 		self.bCenter.Enable(False)
 		
 		self.bGrid = wx.BitmapButton(self, wx.ID_ANY, self.images.pngGrid, size=BUTTONDIM)
-		self.bGrid.SetToolTipString("Create a grid of the selected object")
+		self.bGrid.SetToolTip("Create a grid of the selected object")
 		self.Bind(wx.EVT_BUTTON, self.doGrid, self.bGrid)
 		self.bGrid.Enable(False)
 		
 		self.bMirror = wx.BitmapButton(self, wx.ID_ANY, self.images.pngMirror, size=BUTTONDIM)
-		self.bMirror.SetToolTipString("Mirror the selected object")
+		self.bMirror.SetToolTip("Mirror the selected object")
 		self.Bind(wx.EVT_BUTTON, self.doMirror, self.bMirror)
 		self.bMirror.Enable(False)
 		
 		self.bRotate = wx.BitmapButton(self, wx.ID_ANY, self.images.pngRotate, size=BUTTONDIM)
-		self.bRotate.SetToolTipString("Rotate the selected object")
+		self.bRotate.SetToolTip("Rotate the selected object")
 		self.Bind(wx.EVT_BUTTON, self.doRotate, self.bRotate)
 		self.bRotate.Enable(False)
 		
 		self.bTranslate = wx.BitmapButton(self, wx.ID_ANY, self.images.pngTranslate, size=BUTTONDIM)
-		self.bTranslate.SetToolTipString("Translate the selected object")
+		self.bTranslate.SetToolTip("Translate the selected object")
 		self.Bind(wx.EVT_BUTTON, self.doTranslate, self.bTranslate)
 		self.bTranslate.Enable(False)
 		
 		self.bScale = wx.BitmapButton(self, wx.ID_ANY, self.images.pngScale, size=BUTTONDIM)
-		self.bScale.SetToolTipString("Scale the selected object")
+		self.bScale.SetToolTip("Scale the selected object")
 		self.Bind(wx.EVT_BUTTON, self.doScale, self.bScale)
 		self.bScale.Enable(False)
 		
 		self.bSplit = wx.BitmapButton(self, wx.ID_ANY, self.images.pngSplit, size=BUTTONDIM)
-		self.bSplit.SetToolTipString("Split the selected object")
+		self.bSplit.SetToolTip("Split the selected object")
 		self.Bind(wx.EVT_BUTTON, self.doSplit, self.bSplit)
 		self.bSplit.Enable(False)
 		
-		self.bExport = wx.BitmapButton(self, wx.ID_ANY, self.images.pngExport, size=BUTTONDIM)
-		self.bExport.SetToolTipString("Export the plate to an STL file")
-		self.Bind(wx.EVT_BUTTON, self.doExport, self.bExport)
-		self.bExport.Enable(False)
+		self.bSaveAs = wx.BitmapButton(self, wx.ID_ANY, self.images.pngFilesaveas, size=BUTTONDIM)
+		self.bSaveAs.SetToolTip("Save the plate to an STL file")
+		self.Bind(wx.EVT_BUTTON, self.doSaveAs, self.bSaveAs)
+		self.bSaveAs.Enable(False)
 		
 		self.bView = wx.BitmapButton(self, wx.ID_ANY, self.images.pngView, size=BUTTONDIM)
-		self.bView.SetToolTipString("View the currently selected object")
+		self.bView.SetToolTip("View the currently selected object")
 		self.Bind(wx.EVT_BUTTON, self.doView, self.bView)
 		self.bView.Enable(False)
 		
 		self.bViewPlate = wx.BitmapButton(self, wx.ID_ANY, self.images.pngViewplate, size=BUTTONDIM)
-		self.bViewPlate.SetToolTipString("View the entire plate")
+		self.bViewPlate.SetToolTip("View the entire plate")
 		self.Bind(wx.EVT_BUTTON, self.doViewPlate, self.bViewPlate)
 		self.bViewPlate.Enable(False)
 		
@@ -181,7 +177,7 @@ class PlaterFrame(wx.Frame):
 				)
 		
 		self.Bind(wx.EVT_RADIOBOX, self.onStrategy, self.rbStrategy)
-		self.rbStrategy.SetToolTipString("Choose the strategy for auto-arrange")
+		self.rbStrategy.SetToolTip("Choose the strategy for auto-arrange")
 		if not self.settings.arrangestrategy in self.strategyList:
 			self.settings.arrangestrategy = self.strategyList[0]
 		self.rbStrategy.SetStringSelection(self.settings.arrangestrategy)
@@ -189,26 +185,25 @@ class PlaterFrame(wx.Frame):
 		self.scMargin = wx.SpinCtrl(self, wx.ID_ANY, "Arrange Margin", size=(40, -1))
 		self.scMargin.SetRange(1,5)
 		self.scMargin.SetValue(self.settings.arrangemargin)
-		self.scMargin.SetToolTipString("Choose the distance between objects")
+		self.scMargin.SetToolTip("Choose the distance between objects")
 		self.Bind(wx.EVT_SPINCTRL, self.onScMargin, self.scMargin)
-
 		
 		szFrame = wx.BoxSizer(wx.HORIZONTAL)
 		szLeft = wx.BoxSizer(wx.VERTICAL)
 		
 		szCanvas = wx.BoxSizer(wx.VERTICAL)
-		szCanvas.AddSpacer((10, 20))
+		szCanvas.AddSpacer(20)
 		szCanvas.Add(self.stlCanvas)
-		szCanvas.AddSpacer((10, 10))
+		szCanvas.AddSpacer(10)
 		
 		szLeft.Add(szCanvas)
 		szRight = wx.BoxSizer(wx.VERTICAL)
 		
 		self.files = FileList(self)
 		self.Bind(wx.EVT_LISTBOX, self.doFileSelect, self.files)
-		szRight.AddSpacer((10, 20))
+		szRight.AddSpacer(20)
 		szRight.Add(self.files)
-		szRight.AddSpacer((10, 10))
+		szRight.AddSpacer(10)
 		
 		szBtn = wx.BoxSizer(wx.VERTICAL)
 		szBtnLn1 = wx.BoxSizer(wx.HORIZONTAL)
@@ -221,60 +216,59 @@ class PlaterFrame(wx.Frame):
 		szBtnLn1.Add(self.bAdd)
 		szBtnLn1.Add(self.bDel)
 		szBtnLn1.Add(self.bDelall)
-		szBtnLn1.AddSpacer(BUTTONDIM)
+		szBtnLn1.AddSpacer(BUTTONDIM[0])
 		szBtnLn1.Add(self.bView)
 		szBtnLn1.Add(self.bViewPlate)
-		szBtnLn1.AddSpacer(BUTTONDIM)
-		szBtnLn1.Add(self.bExport)
+		szBtnLn1.AddSpacer(BUTTONDIM[0])
 		
 		szBtnLn2.Add(self.bArrange)
 		szBtnLn2.Add(self.bCenter)
-		szBtnLn2.AddSpacer(BUTTONDIM)
+		szBtnLn2.AddSpacer(BUTTONDIM[0])
 		szBtnLn2.Add(self.bClone)
 		szBtnLn2.Add(self.bGrid)
-		szBtnLn2.AddSpacer(BUTTONDIM)
+		szBtnLn2.AddSpacer(BUTTONDIM[0])
 		szBtnLn2.Add(self.bSplit)
-		szBtnLn2.AddSpacer(BUTTONDIM)
+		szBtnLn2.AddSpacer(BUTTONDIM[0])
 		
 		szBtnLn3.Add(self.bMirror)
 		szBtnLn3.Add(self.bRotate)
 		szBtnLn3.Add(self.bTranslate)
 		szBtnLn3.Add(self.bScale)
-		szBtnLn3.AddSpacer([BUTTONDIM[0]*4, BUTTONDIM[1]])
+		szBtnLn3.AddSpacer(BUTTONDIM[0])
+		szBtnLn3.Add(self.bSaveAs)
 		
 		szBtn.Add(szBtnLn1)
 		szBtn.Add(szBtnLn2)
 		szBtn.Add(szBtnLn3)
 		
 		szRight.Add(szBtn, 1, wx.ALIGN_CENTER_HORIZONTAL)
-		szRight.AddSpacer((5, 5))
+		szRight.AddSpacer(5)
 		
 		szOptionsL.Add(self.cbPreview)
-		szOptionsL.AddSpacer((5, 5))
+		szOptionsL.AddSpacer(5)
 		szOptionsL.Add(self.cbCenterOnArrange)
 
 		szOptionsR.Add(self.rbStrategy)
-		szOptionsR.AddSpacer((5, 5))
+		szOptionsR.AddSpacer(5)
 		szMargin = wx.BoxSizer(wx.HORIZONTAL)
 		szMargin.Add(wx.StaticText(self, wx.ID_ANY, "Arrange margin:"))
-		szMargin.AddSpacer((5,5))
+		szMargin.AddSpacer(5)
 		szMargin.Add(self.scMargin)
 		szOptionsR.Add(szMargin)
 		
-		szOptions.AddSpacer((10, 10))
+		szOptions.AddSpacer(10)
 		szOptions.Add(szOptionsL)
-		szOptions.AddSpacer((30, 10))
+		szOptions.AddSpacer(30)
 		szOptions.Add(szOptionsR)
-		szOptions.AddSpacer((10, 10))
+		szOptions.AddSpacer(10)
 		
 		szRight.Add(szOptions, 1, wx.ALIGN_CENTER_HORIZONTAL)
-		#szRight.AddSpacer((10, 10))
 
-		szFrame.AddSpacer((20, 10))		
+		szFrame.AddSpacer(20)		
 		szFrame.Add(szLeft)
-		szFrame.AddSpacer((20, 10))		
+		szFrame.AddSpacer(20)		
 		szFrame.Add(szRight)
-		szFrame.AddSpacer((20, 10))		
+		szFrame.AddSpacer(20)		
 		
 		self.SetSizer(szFrame)
 		self.Layout()
@@ -297,7 +291,7 @@ class PlaterFrame(wx.Frame):
 		self.bDelall.Enable(v)
 		self.bArrange.Enable(v)
 		self.bCenter.Enable(v)
-		self.bExport.Enable(v)
+		self.bSaveAs.Enable(v)
 		self.bViewPlate.Enable(v)
 		
 	def disableButtons(self):
@@ -314,7 +308,7 @@ class PlaterFrame(wx.Frame):
 		self.bDelall.Enable(False)
 		self.bArrange.Enable(False)
 		self.bCenter.Enable(False)
-		self.bExport.Enable(False)
+		self.bSaveAs.Enable(False)
 		self.bViewPlate.Enable(False)
 		
 	def onScMargin(self, evt):
@@ -330,40 +324,39 @@ class PlaterFrame(wx.Frame):
 		self.settings.centeronarrange = self.cbCenterOnArrange.GetValue()
 
 	def doAdd(self, evt):
-		wildcard = "STL (*.stl)|*.stl|"	 \
+		wildcard = "STL (*.stl)|*.stl;*.STL|"	 \
 			"All files (*.*)|*.*"
 			
-		while True:
-			dlg = wx.FileDialog(
-				self, message="Choose an STL file",
-				defaultDir=self.settings.lastdirectory, 
-				defaultFile="",
-				wildcard=wildcard,
-				style=wx.OPEN)
-	
+		dlg = wx.FileDialog(
+			self, message="Choose an STL file",
+			defaultDir=self.settings.lastdirectory, 
+			defaultFile="",
+			wildcard=wildcard,
+			style=wx.FD_OPEN)
+
+		rc = dlg.ShowModal()
+		if rc == wx.ID_OK:
+			path = dlg.GetPath().encode('ascii','ignore')
+		dlg.Destroy()
+		if rc != wx.ID_OK:
+			return
+		
+		self.settings.lastdirectory = os.path.dirname(path)
+		
+		if self.settings.preview:
+			stlObj = stl(filename = path)
+			dlg = StlViewer(self, stlObj, path, True, self.images, self.settings)
 			rc = dlg.ShowModal()
-			if rc == wx.ID_OK:
-				path = dlg.GetPath().encode('ascii','ignore')
 			dlg.Destroy()
-			if rc != wx.ID_OK:
-				return
-			
-			self.settings.lastdirectory = os.path.dirname(path)
-			
-			if self.settings.preview:
-				dlg = StlViewer(self, path, path, VIEW_MODE_LOAD, self.images, self.settings)
-				rc = dlg.ShowModal()
-				dlg.Destroy()
-			
-			if not self.settings.preview or rc == wx.ID_OK:
-				stlFile = stl(filename = path)
-				ud = UserData(path, stlFile, self.seq)
-				self.files.addFile(ud)
-				self.stlCanvas.addHull(stlFile, self.seq)
-				self.seq += 1
-				self.modified = True
-				self.enableButtons()
-				return
+			dlg = None
+		
+		if not self.settings.preview or rc == wx.ID_OK:
+			ud = UserData(path, stlObj, self.seq)
+			self.files.addFile(ud)
+			self.stlCanvas.addHull(stlObj, self.seq)
+			self.seq += 1
+			self.modified = True
+			self.enableButtons()
 			
 	def setFilesSelection(self, seq):
 		self.files.setSelection(seq)
@@ -380,7 +373,7 @@ class PlaterFrame(wx.Frame):
 		self.stlCanvas.commitDeltas(None)
 		ud = self.files.getSelection()
 		if ud is None:
-			return
+			return None
 		
 		mySeq = self.seq
 		self.seq += 1
@@ -434,7 +427,7 @@ class PlaterFrame(wx.Frame):
 		
 	def doMirror(self, evt):
 		dlg = MirrorDlg(self, self.stlCanvas, self.images, wx.GetMousePosition())
-		rc = dlg.ShowModal()
+		dlg.ShowModal()
 		dlg.Destroy()
 			
 	def doRotate(self, evt):
@@ -534,13 +527,12 @@ class PlaterFrame(wx.Frame):
 			self.enableButtons()
 		else:
 			self.disableButtons()
-
-		
-	def doExport(self, evt):
-		wildcard = "STL (*.stl)|*.stl"
+			
+	def doSaveAs(self, evt):
+		wildcard = "STL (*.stl)|*.stl;*.STL"
 		dlg = wx.FileDialog(
 			self, message="Save file as ...", defaultDir=self.settings.lastdirectory, 
-			defaultFile="", wildcard=wildcard, style=wx.SAVE | wx.FD_OVERWRITE_PROMPT
+			defaultFile="", wildcard=wildcard, style=wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT
 			)
 		
 		rc = dlg.ShowModal()
@@ -558,6 +550,8 @@ class PlaterFrame(wx.Frame):
 		facets = []
 		for o in objs:
 			facets.extend(o.facets)
+			
+		self.savedfile = path
 		
 		emitstl(path, facets=facets, objname="PlaterObject", binary=False)
 		self.modified = False
@@ -566,8 +560,12 @@ class PlaterFrame(wx.Frame):
 			"File '%s' written" % path,
 			"Save",
 			wx.OK | wx.ICON_INFORMATION)
+		
+		self.parent.exportStlFile(self.savedfile, self.settings.autoexport, self.settings.autoenqueue)
+
 		dlg.ShowModal()
 		dlg.Destroy()
+		self.enableButtons()
 
 	def doView(self, evt):
 		self.viewObject()
@@ -575,7 +573,7 @@ class PlaterFrame(wx.Frame):
 	def viewObject(self):
 		self.stlCanvas.commitDeltas(None)
 		ud = self.files.getSelection()
-		dlg = StlViewer(self, ud.getStlObj(), ud.getName(), VIEW_MODE_LOOK_HERE, self.images, self.settings)
+		dlg = StlViewer(self, ud.getStlObj(), ud.getName(), False, self.images, self.settings)
 		dlg.ShowModal()
 		dlg.Destroy()
 		
@@ -587,7 +585,7 @@ class PlaterFrame(wx.Frame):
 		plateStl.facets = []
 		for o in objs:
 			plateStl.facets.extend(o.facets)
-		dlg = StlViewer(self, plateStl, "Plate", VIEW_MODE_LOOK_HERE, self.images, self.settings)
+		dlg = StlViewer(self, plateStl, "Plate", False, self.images, self.settings)
 		dlg.ShowModal()
 		dlg.Destroy()
 
@@ -611,11 +609,9 @@ class PlaterFrame(wx.Frame):
 			
 class App(wx.App):
 	def OnInit(self):
-		self.frame = PlaterFrame()
-		self.frame.Show()
+		self.frame = PlaterDlg()
 		self.SetTopWindow(self.frame)
 		return True
 
 app = App(False)
 app.MainLoop()
-
