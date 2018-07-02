@@ -1,4 +1,4 @@
-#import wx
+import wx
 import wx.lib.newevent
 import os
 import inspect
@@ -182,7 +182,7 @@ class PlaterDlg(wx.Frame):
 			self.settings.arrangestrategy = self.strategyList[0]
 		self.rbStrategy.SetStringSelection(self.settings.arrangestrategy)
 		
-		self.scMargin = wx.SpinCtrl(self, wx.ID_ANY, "Arrange Margin", size=(40, -1))
+		self.scMargin = wx.SpinCtrl(self, wx.ID_ANY, "Arrange Margin", size=(110, -1))
 		self.scMargin.SetRange(1,5)
 		self.scMargin.SetValue(self.settings.arrangemargin)
 		self.scMargin.SetToolTip("Choose the distance between objects")
@@ -241,7 +241,7 @@ class PlaterDlg(wx.Frame):
 		szBtn.Add(szBtnLn2)
 		szBtn.Add(szBtnLn3)
 		
-		szRight.Add(szBtn, 1, wx.ALIGN_CENTER_HORIZONTAL)
+		szRight.Add(szBtn, 0, wx.ALIGN_CENTER_HORIZONTAL)
 		szRight.AddSpacer(5)
 		
 		szOptionsL.Add(self.cbPreview)
@@ -250,11 +250,8 @@ class PlaterDlg(wx.Frame):
 
 		szOptionsR.Add(self.rbStrategy)
 		szOptionsR.AddSpacer(5)
-		szMargin = wx.BoxSizer(wx.HORIZONTAL)
-		szMargin.Add(wx.StaticText(self, wx.ID_ANY, "Arrange margin:"))
-		szMargin.AddSpacer(5)
-		szMargin.Add(self.scMargin)
-		szOptionsR.Add(szMargin)
+		szOptionsR.Add(wx.StaticText(self, wx.ID_ANY, "Arrange margin:"))
+		szOptionsR.Add(self.scMargin)
 		
 		szOptions.AddSpacer(10)
 		szOptions.Add(szOptionsL)
@@ -262,7 +259,8 @@ class PlaterDlg(wx.Frame):
 		szOptions.Add(szOptionsR)
 		szOptions.AddSpacer(10)
 		
-		szRight.Add(szOptions, 1, wx.ALIGN_CENTER_HORIZONTAL)
+		szRight.Add(szOptions, 0, wx.ALIGN_CENTER_HORIZONTAL)
+		szRight.AddSpacer(50)
 
 		szFrame.AddSpacer(20)		
 		szFrame.Add(szLeft)
