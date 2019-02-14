@@ -1,4 +1,5 @@
 import wx
+import os
 
 BUTTONDIM = (48, 48)
 
@@ -17,7 +18,7 @@ class ScaleDlg(wx.Dialog):
 		sizer.AddSpacer(10)
 		sizer.Add(t, 1, wx.TOP, 14)
 		
-		self.scXFactor = wx.SpinCtrl(self, wx.ID_ANY, "ScaleX", size=(60, -1))
+		self.scXFactor = wx.SpinCtrl(self, wx.ID_ANY, "ScaleX", size=(120 if os.name == 'posix' else 70, -1), style=wx.ALIGN_RIGHT)
 		self.scXFactor.SetRange(1, 200)
 		self.scXFactor.SetValue(100)
 		self.scXFactor.SetToolTip("Scaling factor (%) for the X axis")
@@ -31,7 +32,7 @@ class ScaleDlg(wx.Dialog):
 		sizer.AddSpacer(10)
 		sizer.Add(t, 1, wx.TOP, 14)
 		
-		self.scYFactor = wx.SpinCtrl(self, wx.ID_ANY, "ScaleY", size=(60, -1))
+		self.scYFactor = wx.SpinCtrl(self, wx.ID_ANY, "ScaleY", size=(120 if os.name == 'posix' else 70, -1), style=wx.ALIGN_RIGHT)
 		self.scYFactor.SetRange(1, 200)
 		self.scYFactor.SetValue(100)
 		self.scYFactor.SetToolTip("Scaling factor (%) for the Y axis")
@@ -44,7 +45,7 @@ class ScaleDlg(wx.Dialog):
 		sizer.AddSpacer(10)
 		sizer.Add(t, 1, wx.TOP, 14)
 		
-		self.scZFactor = wx.SpinCtrl(self, wx.ID_ANY, "ScaleZ", size=(60, -1))
+		self.scZFactor = wx.SpinCtrl(self, wx.ID_ANY, "ScaleZ", size=(120 if os.name == 'posix' else 70, -1), style=wx.ALIGN_RIGHT)
 		self.scZFactor.SetRange(1, 200)
 		self.scZFactor.SetValue(100)
 		self.scZFactor.SetToolTip("Scaling factor (%) for the Z axis")

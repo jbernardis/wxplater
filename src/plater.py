@@ -182,7 +182,7 @@ class PlaterDlg(wx.Frame):
 			self.settings.arrangestrategy = self.strategyList[0]
 		self.rbStrategy.SetStringSelection(self.settings.arrangestrategy)
 		
-		self.scMargin = wx.SpinCtrl(self, wx.ID_ANY, "Arrange Margin", size=(110, -1))
+		self.scMargin = wx.SpinCtrl(self, wx.ID_ANY, "Arrange Margin", size=(120 if os.name == 'posix' else 70, -1), style=wx.ALIGN_RIGHT)
 		self.scMargin.SetRange(1,5)
 		self.scMargin.SetValue(self.settings.arrangemargin)
 		self.scMargin.SetToolTip("Choose the distance between objects")

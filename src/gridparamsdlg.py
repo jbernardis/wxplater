@@ -1,4 +1,5 @@
 import wx
+import os
 
 BUTTONDIM = (48, 48)		
 
@@ -6,12 +7,12 @@ class GridParamsDlg(wx.Dialog):
 	def __init__(self, parent, images, pos):
 		wx.Dialog.__init__(self, parent, wx.ID_ANY, "Grid Parameters", pos=pos)
 
-		self.scRows = wx.SpinCtrl(self, wx.ID_ANY, "Rows", size=(40, -1))
+		self.scRows = wx.SpinCtrl(self, wx.ID_ANY, "Rows", size=(120 if os.name == 'posix' else 70, -1), style=wx.ALIGN_RIGHT)
 		self.scRows.SetRange(1,99)
 		self.scRows.SetValue(1)
 		self.scRows.SetToolTip("Number of Rows")
 
-		self.scColumns = wx.SpinCtrl(self, wx.ID_ANY, "Columns", size=(40, -1))
+		self.scColumns = wx.SpinCtrl(self, wx.ID_ANY, "Columns", size=(120 if os.name == 'posix' else 70, -1), style=wx.ALIGN_RIGHT)
 		self.scColumns.SetRange(1,99)
 		self.scColumns.SetValue(1)
 		self.scColumns.SetToolTip("Number of Columns")

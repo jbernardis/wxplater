@@ -1,4 +1,5 @@
 import wx
+import os
 
 BUTTONDIM = (48, 48)
 
@@ -17,7 +18,7 @@ class TranslateDlg(wx.Dialog):
 		sizer.Add(t, 1, wx.TOP, 14)
 		
 		
-		self.scXDist = wx.SpinCtrl(self, wx.ID_ANY, "Millimeters", size=(60, -1))
+		self.scXDist = wx.SpinCtrl(self, wx.ID_ANY, "Millimeters", size=(120 if os.name == 'posix' else 70, -1), style=wx.ALIGN_RIGHT)
 		self.scXDist.SetRange(-200, 200)
 		self.scXDist.SetValue(0)
 		self.scXDist.SetToolTip("Distance to move along the X axis")
@@ -30,7 +31,7 @@ class TranslateDlg(wx.Dialog):
 		sizer.AddSpacer(10)
 		sizer.Add(t, 1, wx.TOP, 14)
 		
-		self.scYDist = wx.SpinCtrl(self, wx.ID_ANY, "Millimeters", size=(60, -1))
+		self.scYDist = wx.SpinCtrl(self, wx.ID_ANY, "Millimeters", size=(120 if os.name == 'posix' else 70, -1), style=wx.ALIGN_RIGHT)
 		self.scYDist.SetRange(-200, 200)
 		self.scYDist.SetValue(0)
 		self.scYDist.SetToolTip("Distance to move along the Y axis")

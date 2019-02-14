@@ -1,4 +1,5 @@
 import wx
+import os
 
 BUTTONDIM = (48, 48)
 
@@ -27,7 +28,7 @@ class RotateDlg(wx.Dialog):
 		sizer.AddSpacer(10)
 		sizer.Add(t, 1, wx.TOP, 14)
 		
-		self.scDegZ = wx.SpinCtrl(self, wx.ID_ANY, "Degreesz", size=(60, -1))
+		self.scDegZ = wx.SpinCtrl(self, wx.ID_ANY, "Degreesz", size=(120 if os.name == 'posix' else 70, -1), style=wx.ALIGN_RIGHT)
 		self.scDegZ.SetRange(-359, 359)
 		self.scDegZ.SetValue(0)
 		self.scDegZ.SetToolTip("Angle of rotation around Z axis(<0 => CW rotation)")
@@ -57,7 +58,7 @@ class RotateDlg(wx.Dialog):
 		sizer.AddSpacer(10)
 		sizer.Add(t, 1, wx.TOP, 14)
 		
-		self.scDegX = wx.SpinCtrl(self, wx.ID_ANY, "Degreesx", size=(60, -1))
+		self.scDegX = wx.SpinCtrl(self, wx.ID_ANY, "Degreesx", size=(120 if os.name == 'posix' else 70, -1), style=wx.ALIGN_RIGHT)
 		self.scDegX.SetRange(-359, 359)
 		self.scDegX.SetValue(0)
 		self.scDegX.SetToolTip("Angle of rotation around the X axis")
@@ -71,7 +72,7 @@ class RotateDlg(wx.Dialog):
 		sizer.AddSpacer(10)
 		sizer.Add(t, 1, wx.TOP, 14)
 		
-		self.scDegY = wx.SpinCtrl(self, wx.ID_ANY, "Degreesy", size=(60, -1))
+		self.scDegY = wx.SpinCtrl(self, wx.ID_ANY, "Degreesy", size=(120 if os.name == 'posix' else 70, -1), style=wx.ALIGN_RIGHT)
 		self.scDegY.SetRange(-359, 359)
 		self.scDegY.SetValue(0)
 		self.scDegY.SetToolTip("Angle of rotation around the Y axis")
