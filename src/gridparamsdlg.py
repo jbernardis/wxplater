@@ -1,5 +1,4 @@
 import wx
-import os
 
 BUTTONDIM = (48, 48)		
 
