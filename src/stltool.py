@@ -1,19 +1,5 @@
-# This file is part of the Printrun suite.
-# 
-# Printrun is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-# 
-# Printrun is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-# 
-# You should have received a copy of the GNU General Public License
-# along with Printrun.  If not, see <http://www.gnu.org/licenses/>.
-
 import sys, struct, math, numpy
+import time
 
 def cross(v1,v2):
 	return [v1[1]*v2[2]-v1[2]*v2[1],v1[2]*v2[0]-v1[0]*v2[2],v1[0]*v2[1]-v1[1]*v2[0]]
@@ -25,37 +11,26 @@ def genfacet(v):
 	vlen=math.sqrt(sum(map(lambda x:x*x,vecx)))
 	if vlen==0:
 		vlen=1
-	normal=map(lambda x:x/vlen, vecx)
+	normal=list(map(lambda x:x/vlen, vecx))
 	return [normal,v]
 
-I=[
+I=(
 	[1,0,0,0],
 	[0,1,0,0],
 	[0,0,1,0],
 	[0,0,0,1]
-]
+)
 
 def transpose(matrix):
 	return zip(*matrix)
-	#return [[v[i] for v in matrix] for i in xrange(len(matrix[0]))]
-	
+
 def multmatrix(vector,matrix):
-	return map(sum, transpose(map(lambda x:[x[0]*p for p in x[1]], zip(vector, transpose(matrix)))))
+	return list(map(sum, transpose(map(lambda x:[x[0]*p for p in x[1]], zip(vector, transpose(matrix))))))
 	
 def applymatrix(facet,matrix=I):
-	#return facet
-	#return [map(lambda x:-1.0*x,multmatrix(facet[0]+[1],matrix)[:3]),map(lambda x:multmatrix(x+[1],matrix)[:3],facet[1])]
-	return genfacet(map(lambda x:multmatrix(x+[1],matrix)[:3],facet[1]))
+	return genfacet(list(map(lambda x:multmatrix(x+[1],matrix)[:3],facet[1])))
 	
-f=[[0,0,0],[[-3.022642, 0.642482, -9.510565],[-3.022642, 0.642482, -9.510565],[-3.022642, 0.642482, -9.510565]]]
-m=[
-	[1,0,0,0],
-	[0,1,0,0],
-	[0,0,1,1],
-	[0,0,0,1]
-]
-
-def emitstl(filename,facets=[],objname="stltool_export",binary=False):
+def emitstl(filename,facets=(),objname="stltool_export",binary=False):
 	if filename is None:
 		return
 	if binary:
@@ -69,10 +44,9 @@ def emitstl(filename,facets=[],objname="stltool_export",binary=False):
 				l+=j[:]
 			l+=[0]
 			buf+=facetformat.pack(*l)
-		f.write(buf)
+		f.write(buf.encode())
 		f.close()
 		return
-		
 
 	f=open(filename,"w")
 	f.write("solid "+objname+"\n")
@@ -89,7 +63,31 @@ def is_ascii(s):
 	if not all(ord(c) < 128 for c in s):
 		return False
 	
-	return s.startswith("solid")	
+	return s.startswith("solid")
+
+def qhull(sample):
+	link = lambda a, b: numpy.concatenate((a, b[1:]))
+	edge = lambda a, b: numpy.concatenate(([a], [b]))
+
+	def dome(sample, base):
+		h, t = base
+		dists = numpy.dot(sample - h, numpy.dot(((0, -1), (1, 0)), (t - h)))
+		outer = numpy.repeat(sample, dists > 0, axis=0)
+
+		if len(outer):
+			pivot = sample[numpy.argmax(dists)]
+			return link(dome(outer, edge(h, pivot)),
+						dome(outer, edge(pivot, t)))
+		else:
+			return base
+
+	if len(sample) > 2:
+		axis = sample[:, 0]
+		base = numpy.take(sample, [numpy.argmin(axis), numpy.argmax(axis)], axis=0)
+		return link(dome(sample, base),
+					dome(sample, base[::-1]))
+	else:
+		return sample
 		
 class stl:
 	def __init__(self, filename=None, name=None):
@@ -108,21 +106,40 @@ class stl:
 		self.translatey = 0
 		self.rotation = 0
 		self.filename = filename
+		self.minx = 0
+		self.maxx = 0
+		self.miny = 0
+		self.maxy = 0
+		self.minz = 0
+		self.maxz = 0
+		self.hull = None
+		self.projection = None
+		self.hxCenter = 0
+		self.hyCenter = 0
+		self.hxSize = 0
+		self.hySize = 0
+		self.hArea = 0
+
 		if filename is not None:
-			self.f=list(open(filename))
-			if not is_ascii(self.f[0]):
+			binaryFile = False
+			try:
+				self.f=list(open(filename, "r"))
+			except UnicodeDecodeError:
+				binaryFile = True
+
+			if binaryFile:
 				f=open(filename,"rb")
 				buf=f.read(84)
-				while(len(buf)<84):
+				while len(buf)<84:
 					newdata=f.read(84-len(buf))
 					if not len(newdata):
 						break
 					buf+=newdata
 				facetcount=struct.unpack_from("<I",buf,80)
 				facetformat=struct.Struct("<ffffffffffffH")
-				for i in xrange(facetcount[0]):
+				for i in range(facetcount[0]):
 					buf=f.read(50)
-					while(len(buf)<50):
+					while len(buf)<50:
 						newdata=f.read(50-len(buf))
 						if not len(newdata):
 							break
@@ -130,29 +147,30 @@ class stl:
 					fd=list(facetformat.unpack(buf))
 					self.facet=[fd[:3],[fd[3:6],fd[6:9],fd[9:12]]]
 					self.facets+=[self.facet]
-					facet=self.facet
 				f.close()
 			else:
 				for i in self.f:
 					self.parseline(i)
-					
+
 			for f in self.facets:
 				f[0] = genfacet(f[1])[0]
 
 			self.setHull()
 			self.normalize()
-			
+
 	def setFacets(self, facets):
 		self.facets = facets
 		self.setHull()
-			
+
 	def setName(self, name):
 		self.name = name
 	
 	def setHull(self):
-		self.projection = numpy.array([])
+		prj = numpy.empty((0,2), float)
+		prjAll = numpy.empty((0,2), float)
 		self.minz = 99999
 		self.maxz = -99999
+
 		for f in self.facets:
 			if f[1][0][2] < self.minz: self.minz = f[1][0][2]
 			if f[1][1][2] < self.minz: self.minz = f[1][1][2]
@@ -160,16 +178,16 @@ class stl:
 			if f[1][0][2] > self.maxz: self.maxz = f[1][0][2]
 			if f[1][1][2] > self.maxz: self.maxz = f[1][1][2]
 			if f[1][2][2] > self.maxz: self.maxz = f[1][2][2]
-			if [f[1][0][0], f[1][0][1]] not in self.projection:
-				self.projection=numpy.concatenate((self.projection, [f[1][0][0], f[1][0][1]]))
-			if [f[1][1][0], f[1][1][1]] not in self.projection:
-				self.projection=numpy.concatenate((self.projection, [f[1][1][0], f[1][1][1]]))
-			if [f[1][2][0], f[1][2][1]] not in self.projection:
-				self.projection=numpy.concatenate((self.projection, [f[1][2][0], f[1][2][1]]))
+			prj = numpy.append(prj, [ [f[1][0][0], f[1][0][1]], [f[1][1][0], f[1][1][1]], [f[1][2][0], f[1][2][1]] ], axis=0)
+			if len(prj) > 1000:
+				prjAll = numpy.append(prjAll, prj, axis=0)
+				prj = numpy.empty((0,2), float)
 
-		n = len(self.projection)			
-		self.projection = self.projection.reshape(n/2,2)
-		self.hull = self.qhull(self.projection)
+		if len(prj) > 0:
+			prjAll = numpy.append(prjAll, prj, axis=0)
+
+		self.projection = numpy.unique(prjAll, axis=0)
+		self.hull = qhull(self.projection)
 		hMin = self.hull.min(axis=0)
 		hMax = self.hull.max(axis=0)
 		self.hxCenter = (hMin[0] + hMax[0])/2.0
@@ -209,8 +227,7 @@ class stl:
 			
 		self.hxCenter += dx
 		self.hyCenter += dy
-			
-		
+
 	def deltaTranslation(self, dx, dy):
 		self.translatex += dx
 		self.translatey += dy
@@ -311,7 +328,7 @@ class stl:
 		self.setHull()
 		self.setZZero()
 			
-	def translate(self,v=[0,0,0]):
+	def translate(self,v=(0,0,0)):
 		matrix=[
 		[1,0,0,v[0]],
 		[0,1,0,v[1]],
@@ -320,7 +337,7 @@ class stl:
 		]
 		return self.transform(matrix)
 	
-	def rotate(self,v=[0,0,0]):
+	def rotate(self,v=(0,0,0)):
 		z=v[2]
 		matrix1=[
 		[math.cos(math.radians(z)),-math.sin(math.radians(z)),0,0],
@@ -344,7 +361,7 @@ class stl:
 		]
 		return self.transform(matrix1).transform(matrix2).transform(matrix3)
 	
-	def scale(self,v=[0,0,0]):
+	def scale(self,v=(0,0,0)):
 		matrix=[
 		[v[0],0,0,0],
 		[0,v[1],0,0],
@@ -412,33 +429,9 @@ class stl:
 		elif l.startswith("endfacet"):
 			self.infacet=0
 			self.facets+=[self.facet]
-			facet=self.facet
+			#facet=self.facet
 		elif l.startswith("vertex"):
 			l=l.replace(",",".")
-			self.facet[1][self.facetloc]=map(float,l.split()[1:])
+			self.facet[1][self.facetloc] = list(map(float,l.split()[1:]))
 			self.facetloc+=1
 		return 1
-
-	def qhull(self, sample):
-		link = lambda a,b: numpy.concatenate((a,b[1:]))
-		edge = lambda a,b: numpy.concatenate(([a],[b]))
-	
-		def dome(sample,base): 
-			h, t = base
-			dists = numpy.dot(sample-h, numpy.dot(((0,-1),(1,0)),(t-h)))
-			outer = numpy.repeat(sample, dists>0, axis=0)
-			
-			if len(outer):
-				pivot = sample[numpy.argmax(dists)]
-				return link(dome(outer, edge(h, pivot)),
-							dome(outer, edge(pivot, t)))
-			else:
-				return base
-	
-		if len(sample) > 2:
-			axis = sample[:,0]
-			base = numpy.take(sample, [numpy.argmin(axis), numpy.argmax(axis)], axis=0)
-			return link(dome(sample, base),
-						dome(sample, base[::-1]))
-		else:
-			return sample

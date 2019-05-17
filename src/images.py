@@ -8,7 +8,7 @@ class Images:
 			pdir = os.path.expandvars(idir)
 			l = os.listdir(pdir)
 		except:
-			print "Unable to get listing from directory: ", idir
+			print("Unable to get listing from directory: ", idir)
 			return
 
 		for f in l:

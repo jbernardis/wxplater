@@ -1,4 +1,5 @@
 import wx
+import os
 
 BUTTONDIM = (48, 48)
 
@@ -94,29 +95,29 @@ class RotateDlg(wx.Dialog):
 		self.SetSizer(vsizer)
 		self.Fit()
 		
-	def onbRot45CCW(self, evt):
+	def onbRot45CCW(self, _):
 		self.stlFrame.rotate(45)
 		self.parent.modified = True
 		
-	def onbRot45CW(self, evt):
+	def onbRot45CW(self, _):
 		self.stlFrame.rotate(-45)
 		self.parent.modified = True
 		
-	def onbRotate(self, evt):
+	def onbRotate(self, _):
 		degrees = self.scDegZ.GetValue()
 		if degrees != 0:
 			self.stlFrame.rotate(degrees)
 			self.parent.modified = True
 		
-	def onbRotatexy(self, evt):
+	def onbRotatexy(self, _):
 		degreesx = self.scDegX.GetValue()
 		degreesy = self.scDegY.GetValue()
 		if degreesx != 0 or degreesy != 0:
 			self.stlFrame.xyRotate(degreesx, degreesy)
 			self.parent.modified = True
 				
-	def onbView(self, evt):
+	def onbView(self, _):
 		self.parent.viewObject()
 		
-	def onbExit(self, evt):
+	def onbExit(self, _):
 		self.EndModal(wx.ID_OK)

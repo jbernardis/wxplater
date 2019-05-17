@@ -18,7 +18,7 @@ class FileList(wx.ListBox):
 
 		self.SetFont(f)
 		
-	def doClick(self, evt):
+	def doClick(self, _):
 		s = self.GetSelection()
 		if s != wx.NOT_FOUND:
 			self.parent.setHullSelection(self.files[s].userData.getSeqNbr())

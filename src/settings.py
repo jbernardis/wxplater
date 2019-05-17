@@ -1,11 +1,11 @@
-import ConfigParser
+import configparser
 
 import os
 
 INIFILE = "plater.ini"
 
 def parseBoolean(val, defaultVal):
-	lval = val.lower();
+	lval = val.lower()
 	
 	if lval == 'true' or lval == 't' or lval == 'yes' or lval == 'y':
 		return True
@@ -32,10 +32,10 @@ class Settings:
 		
 		self.inifile = os.path.join(folder, INIFILE)
 		
-		self.cfg = ConfigParser.ConfigParser()
+		self.cfg = configparser.ConfigParser()
 		self.cfg.optionxform = str
 		if not self.cfg.read(self.inifile):
-			print "Settings file %s does not exist.  Using default values" % INIFILE
+			print("Settings file %s does not exist.  Using default values" % INIFILE)
 			return
 
 		if self.cfg.has_section(self.section):
@@ -48,7 +48,7 @@ class Settings:
 					try:
 						self.arrangemargin = int(value)
 					except:
-						print "Invalid value for arrangemargin"
+						print("Invalid value for arrangemargin")
 						self.arrangemargin = 2
 				elif opt == "preview":
 					self.preview = parseBoolean(value, True)
@@ -64,7 +64,7 @@ class Settings:
 					try:
 						self.scale = int(value)
 					except:
-						print "Invalid value for scale"
+						print("Invalid value for scale")
 						self.scale = 2
 				elif opt == 'buildarea':
 					try:
@@ -72,13 +72,13 @@ class Settings:
 						exec("s=%s" % value)
 						self.buildarea = s
 					except:
-						print "invalid value in ini file for buildarea"
+						print("invalid value in ini file for buildarea")
 						self.buildarea = [200, 200]
 					
 	def save(self):
 		try:
 			self.cfg.add_section(self.section)
-		except ConfigParser.DuplicateSectionError:
+		except configparser.DuplicateSectionError:
 			pass
 		
 		self.cfg.set(self.section, "lastdirectory", str(self.lastdirectory))
@@ -93,9 +93,9 @@ class Settings:
 		self.cfg.set(self.section, "buildarea", str(self.buildarea))
 
 		try:		
-			cfp = open(self.inifile, 'wb')
+			cfp = open(self.inifile, 'w')
 		except:
-			print "Unable to open settings file %s for writing" % self.inifile
+			print("Unable to open settings file %s for writing" % self.inifile)
 			return
 		self.cfg.write(cfp)
 		cfp.close()

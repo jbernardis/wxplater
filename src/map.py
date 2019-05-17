@@ -14,7 +14,7 @@ def spiral(needx, needy, totalx, totaly):
 	if validPt(cx, cy, totalx, totaly, needx, needy):
 		yield cx, cy
 	
-	for d in range(1, loops):
+	for d in range(1, int(loops)):
 		for dx in range(-d, d):
 			if validPt(cx+dx, cy+d, totalx, totaly, needx, needy):
 				yield cx+dx, cy+d
@@ -56,7 +56,7 @@ class Map:
 	def mark(self, sx, sy, width, height):
 		for x in range(int(width)):
 			for y in range(int(height)):
-				if sx+x >= 0 and sx+x < self.width and sy+y >= 0 and sy+y <self.height:
+				if 0 <= sx+x < self.width and 0 <= sy+y <self.height:
 					self.map[sx+x][sy+y] = 1
 					
 	def fits(self, x, y, width, height):
@@ -80,6 +80,6 @@ class Map:
 			
 		for x,y in gen(int(width), int(height), self.width, self.height):
 			if self.fits(x, y, width, height):
-				return (x,y)
+				return x, y
 
-		return (None, None)
+		return None, None

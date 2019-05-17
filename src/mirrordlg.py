@@ -40,21 +40,21 @@ class MirrorDlg(wx.Dialog):
 		self.SetSizer(sizer)
 		self.Fit()
 		
-	def onbX(self, evt):
+	def onbX(self, _):
 		self.stlframe.yzMirror()
 		self.parent.modified = True
 		
-	def onbY(self, evt):
+	def onbY(self, _):
 		self.stlframe.xzMirror()
 		self.parent.modified = True
 		
-	def onbZ(self, evt):
+	def onbZ(self, _):
 		self.stlframe.xyMirror()
 		self.parent.modified = True
 				
-	def onbView(self, evt):
+	def onbView(self, _):
 		self.parent.viewObject()
 		
-	def onbExit(self, evt):
+	def onbExit(self, _):
 		self.EndModal(wx.ID_CANCEL)
 			

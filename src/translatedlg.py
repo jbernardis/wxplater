@@ -1,4 +1,5 @@
 import wx
+import os
 
 BUTTONDIM = (48, 48)
 
@@ -57,7 +58,7 @@ class TranslateDlg(wx.Dialog):
 		self.SetSizer(sizer)
 		self.Fit()
 		
-	def onbMoveXY(self, evt):
+	def onbMoveXY(self, _):
 		dx = self.scXDist.GetValue()
 		dy = self.scYDist.GetValue()
 		
@@ -65,8 +66,8 @@ class TranslateDlg(wx.Dialog):
 			self.stlFrame.translatexy(dx, dy)
 			self.parent.modified = True
 				
-	def onbView(self, evt):
+	def onbView(self, _):
 		self.parent.viewObject()
 		
-	def onbExit(self, evt):
+	def onbExit(self, _):
 		self.EndModal(wx.ID_OK)

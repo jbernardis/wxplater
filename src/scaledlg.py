@@ -1,4 +1,5 @@
 import wx
+import os
 
 BUTTONDIM = (48, 48)
 
@@ -79,7 +80,7 @@ class ScaleDlg(wx.Dialog):
 		self.SetSizer(sizer)
 		self.Fit()
 		
-	def oncbUniform(self, evt):
+	def oncbUniform(self, _):
 		self.uniform = self.cbUniform.GetValue()
 		if self.uniform:
 			v = self.scXFactor.GetValue()
@@ -93,13 +94,13 @@ class ScaleDlg(wx.Dialog):
 			self.scZFactor.Enable(True)
 			self.scXFactor.SetToolTip("Scaling factor (%) for the X axis")
 			
-	def onscXFactor(self, evt):
+	def onscXFactor(self, _):
 		if self.uniform:
 			v = self.scXFactor.GetValue()
 			self.scYFactor.SetValue(v)
 			self.scZFactor.SetValue(v)
 		
-	def onbScale(self, evt):
+	def onbScale(self, _):
 		sx = self.scXFactor.GetValue() / 100.0
 		sy = self.scYFactor.GetValue() / 100.0
 		sz = self.scZFactor.GetValue() / 100.0
@@ -108,8 +109,8 @@ class ScaleDlg(wx.Dialog):
 			self.stlFrame.scalexyz(sx, sy, sz)
 			self.parent.modified = True
 				
-	def onbView(self, evt):
+	def onbView(self, _):
 		self.parent.viewObject()
 		
-	def onbExit(self, evt):
+	def onbExit(self, _):
 		self.EndModal(wx.ID_OK)

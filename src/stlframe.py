@@ -11,24 +11,34 @@ clrSelected = '#00f400'
 def worldToScreen(ptx, pty):
 	x = ptx * scale
 	y = (buildarea[1] - pty )* scale
-	return (x, y)
+	return x, y
 
 def screenToWorld(ptx, pty):
 	x = ptx / scale
 	y = buildarea[1] - pty / scale
-	return (x, y)
+	return x, y
 
 class Hull:
 	def __init__(self, stlObj, seq):
 		self.stlObj = stlObj
 		self.seq = seq
-		#self.transx = self.transy = 0
-		
+		self.ptsWorld = None
+		self.ptsScreen = None
+		self.minx = 99999
+		self.maxx = -99999
+		self.miny = 99999
+		self.maxy = -99999
+		self.centerx = 0
+		self.centery = 0
+		self.width = 0
+		self.height = 0
+		self.area = 0
+
 		self.refresh()
 
 	def commitDeltas(self):
 		self.stlObj.applyDeltas()
-		
+
 		self.ptsWorld = self.stlObj.hull
 		self.ptsScreen = [worldToScreen(x[0], x[1]) for x in self.stlObj.hull]
 		
@@ -181,6 +191,7 @@ class StlFrame (wx.Window):
 		
 		self.startPos = None
 		self.hulls = []
+		self.buffer = None
 		self.selectedSeq = None
 		self.selectedHull = None
 		
@@ -265,7 +276,6 @@ class StlFrame (wx.Window):
 			return None
 		
 		for h in self.hulls:
-			d = math.hypot(h.centerx-ptx, h.centery-pty)
 			dx = math.fabs(h.centerx-ptx)
 			dy = math.fabs(h.centery-pty)
 			if dx < h.width/2 and dy < h.height/2:
@@ -297,13 +307,13 @@ class StlFrame (wx.Window):
 		h.translate(x-h.centerx, y-h.centery)
 		self.refresh()
 		
-	def onLeftUp(self, evt):
+	def onLeftUp(self, _):
 		self.startPos = None
 		if self.HasCapture():
 			self.ReleaseMouse()
 			
 	def onMotion(self, evt):
-		if evt.Dragging() and evt.LeftIsDown() and self.startPos != None:
+		if evt.Dragging() and evt.LeftIsDown() and self.startPos is not None:
 			pos = evt.GetPosition()
 			x, y = screenToWorld(pos[0], pos[1])
 			dx = x - self.startPos[0]
@@ -403,15 +413,12 @@ class StlFrame (wx.Window):
 		self.refresh()
 		
 	def arrange(self):
-		def cmpobj(a, b):
-			return cmp(b.area, a.area)
-		
 		if not self.selectedHull is None:
 			self.selectedHull.commitDeltas()
 
 		omap = Map(buildarea, self.settings.arrangestrategy)
 		
-		for h in sorted(self.hulls, cmpobj):
+		for h in sorted(self.hulls, key=lambda x:x.area):
 			x, y = omap.find(h.width+self.settings.arrangemargin*2, h.height+self.settings.arrangemargin*2)
 			if x is None or y is None:
 				ud = self.parent.findUserDataBySeq(h.seq)
@@ -470,11 +477,11 @@ class StlFrame (wx.Window):
 			self.refresh()
 
 
-	def onSize(self, evt):
+	def onSize(self, _):
 		self.initBuffer()
 		
 	def initBuffer(self):
-		w, h = self.GetClientSize();
+		w, h = self.GetClientSize()
 		self.buffer = wx.Bitmap(w, h)
 		self.refresh()
 		
@@ -482,7 +489,7 @@ class StlFrame (wx.Window):
 		dc = wx.BufferedDC(wx.ClientDC(self), self.buffer)
 		self.drawGraph(dc)
 		
-	def onPaint(self, evt):
+	def onPaint(self, _):
 		dc = wx.BufferedPaintDC(self, self.buffer)
 		
 	def drawGraph(self, dc):
@@ -506,7 +513,7 @@ class StlFrame (wx.Window):
 			else:
 				dc.SetPen(wx.Pen(dk_Gray, 1))
 			x = x *scale
-			if x >= 0 and x <= buildarea[0]*scale:
+			if 0 <= x <= buildarea[0]*scale:
 				dc.DrawLine(x, yleft, x, yright)
 			
 		xtop = 0
@@ -522,7 +529,7 @@ class StlFrame (wx.Window):
 			else:
 				dc.SetPen(wx.Pen(dk_Gray, 1))
 			y = y *scale
-			if y >= 0 and y <= buildarea[1]*scale:
+			if 0 <= y <= buildarea[1]*scale:
 				dc.DrawLine(xtop, y, xbottom, y)
 				
 	def drawObjects(self, dc):

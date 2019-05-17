@@ -4,10 +4,11 @@ class UserData:
 		self.stlObj = stlObj
 		self.seq = seq
 		self.part = None
+		self.name = None
 		self.formObjectName()
 		
 	def formObjectName(self):
-		self.name = self.fn
+		self.name = self.fn.decode()
 		if not self.part is None:
 			self.name += " - Part %s " % self.part
 		self.name += " (Object %d)" % self.seq

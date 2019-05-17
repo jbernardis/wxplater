@@ -1,4 +1,5 @@
 import wx
+import os
 
 BUTTONDIM = (48, 48)		
 
@@ -59,10 +60,10 @@ class GridParamsDlg(wx.Dialog):
 		self.SetSizer(szDlg)
 		self.Fit()
 	
-	def onbOK(self, evt):
+	def onbOK(self, _):
 		self.EndModal(wx.ID_OK)
 		
-	def onbCancel(self, evt):
+	def onbCancel(self, _):
 		self.EndModal(wx.ID_CANCEL)
 		
 	def getValues(self):

@@ -1,12 +1,17 @@
 from wx import glcanvas
 import wx
-import os
 
-from OpenGL.GL import *
-from OpenGL.GLU import *
+from OpenGL.GL import (glViewport, GLfloat, glColor3f, glClearColor, glEnable, GL_DEPTH_TEST, GL_CULL_FACE,
+			GL_LIGHTING, GL_LIGHT0, GL_LIGHT1, glLightfv, GL_POSITION, GL_SPECULAR, GL_DIFFUSE,
+					   glMaterialf, glMaterialfv, GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE, GL_SHININESS,
+					   GL_EMISSION, glMatrixMode, GL_PROJECTION, glLoadIdentity, glFrustum, GL_MODELVIEW,
+					   glRotatef, glTranslatef, glClear, glColorMaterial, GL_COLOR_MATERIAL,
+					   GL_COLOR_BUFFER_BIT, GL_DEPTH_BUFFER_BIT, glBegin, GL_LINES, glColor, glVertex3f, glEnd,
+					   glEnableClientState, GL_VERTEX_ARRAY, glVertexPointer, GL_FLOAT, GL_NORMAL_ARRAY,
+					   glNormalPointer, glDrawArrays, GL_TRIANGLES, glDisable)
+from OpenGL.GLU import gluLookAt
 from OpenGL.arrays import vbo
 
-import struct, math
 import numpy as np
 
 import pprint
@@ -18,7 +23,7 @@ def vec(*args):
 	
 class StlCanvas(glcanvas.GLCanvas):
 	def __init__(self, parent, wid=-1, buildarea=(200, 200), pos=wx.DefaultPosition,
-				 size=(600, 600), style=0, mainwindow=None):
+				 size=(600, 600), style=0):
 		attribList = (glcanvas.WX_GL_RGBA,  # RGBA
 					  glcanvas.WX_GL_DOUBLEBUFFER,  # Double Buffered
 					  glcanvas.WX_GL_DEPTH_SIZE, 24)  # 24 bit
@@ -29,6 +34,16 @@ class StlCanvas(glcanvas.GLCanvas):
 		
 		self.spin = True
 		self.originAtCenter = True
+
+		self.vertices = None
+		self.normals = None
+		self.npverts = None
+		self.npnorms = None
+		self.vertexPositions = None
+		self.normalPositions = None
+		self.gridVertices = None
+		self.gridColors = None
+
 
 		# initial mouse position
 		self.lastx = self.x = 0
@@ -74,15 +89,13 @@ class StlCanvas(glcanvas.GLCanvas):
 
 	def OnSize(self, event):
 		size = self.size = self.GetClientSize()
-		if (self.GetParent().IsShown()):
-			if (self.context is not None):
+		if self.GetParent().IsShown():
+			if self.context is not None:
 				self.SetCurrent(self.context)
-			else:
-				self.SetCurrent()
 			glViewport(0, 0, size.width, size.height)
 		event.Skip()
 
-	def OnPaint(self, event):
+	def OnPaint(self, _):
 		dc = wx.PaintDC(self)
 		if self.IsShown():
 			self.SetCurrent(self.context)
@@ -103,7 +116,7 @@ class StlCanvas(glcanvas.GLCanvas):
 	def stopTimer(self):
 		self.timer.Stop()
 
-	def OnTimer(self, evt):
+	def OnTimer(self, _):
 		if not self.spin:
 			return
 		
@@ -116,17 +129,17 @@ class StlCanvas(glcanvas.GLCanvas):
 		self.stopTimer()
 		self.x, self.y = self.lastx, self.lasty = evt.GetPosition()
 
-	def OnMouseUp(self, evt):
+	def OnMouseUp(self, _):
 		if self.HasCapture():
 			self.ReleaseMouse()
 			self.startTimer()
 
-	def OnMouseRightUp(self, evt):
+	def OnMouseRightUp(self, _):
 		if self.HasCapture():
 			self.ReleaseMouse()
 			self.startTimer()
 		
-	def OnMouseDouble(self, evt):
+	def OnMouseDouble(self, _):
 		self.resetView = True
 		self.setZoom(1.0)
 		self.Refresh(False)
@@ -227,7 +240,7 @@ class StlCanvas(glcanvas.GLCanvas):
 		self.gridVertices = []
 		self.gridColors = []
 		
-		for i in xrange(-rows, rows + 1):
+		for i in range(-rows, rows + 1):
 			if i == -rows:
 				c = [1.0, 0.0, 0.0, 1]
 			elif i % 5 == 0:
@@ -237,7 +250,7 @@ class StlCanvas(glcanvas.GLCanvas):
 			self.gridVertices.append([10 * -cols, 10 * i, 0, 10 * cols, 10 * i, 0])
 			self.gridColors.append(c)
 			
-		for i in xrange(-cols, cols + 1):
+		for i in range(-cols, cols + 1):
 			if i == -cols:
 				c = [1.0, 0.0, 0.0, 1]
 			elif i % 5 == 0:
@@ -252,7 +265,7 @@ class StlCanvas(glcanvas.GLCanvas):
 		glLoadIdentity()
 		glFrustum(-50.0*self.zoom, 50.0*self.zoom, -50.0*self.zoom, 50.0*self.zoom, 200, 800.0)
 		#glTranslatef(0.0, 0.0, -400.0)
-		gluLookAt (200.0, -200.0, 400.0, 0.0, 0.0, 0.0, -1.0, 1.0, 0.0);
+		gluLookAt (200.0, -200.0, 400.0, 0.0, 0.0, 0.0, -1.0, 1.0, 0.0)
 
 		glMatrixMode(GL_MODELVIEW)
 		if self.resetView:
@@ -270,14 +283,14 @@ class StlCanvas(glcanvas.GLCanvas):
 		h = max(h, 1.0)
 		xScale = 180.0 / w
 		yScale = 180.0 / h
-		glRotatef(self.angley * yScale, 1.0, 0.0, 0.0);
-		glRotatef(self.anglex * xScale, 0.0, 1.0, 0.0);
-		glRotatef(self.anglez, 0.0, 0.0, 1.0);
+		glRotatef(self.angley * yScale, 1.0, 0.0, 0.0)
+		glRotatef(self.anglex * xScale, 0.0, 1.0, 0.0)
+		glRotatef(self.anglez, 0.0, 0.0, 1.0)
 		glTranslatef(self.transx, self.transy, 0.0)
 
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
-		glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
-		glEnable(GL_COLOR_MATERIAL);
+		glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE)
+		glEnable(GL_COLOR_MATERIAL)
 
 		glEnable(GL_LIGHTING)
 		glEnable(GL_LIGHT0)
@@ -298,19 +311,19 @@ class StlCanvas(glcanvas.GLCanvas):
 		glColor([0.0, 0.5, 0.25, 1])
 			
 		self.vertexPositions.bind()
-		glEnableClientState(GL_VERTEX_ARRAY);
-		glVertexPointer(3, GL_FLOAT, 0, self.vertexPositions);
+		glEnableClientState(GL_VERTEX_ARRAY)
+		glVertexPointer(3, GL_FLOAT, 0, self.vertexPositions)
 		
 		self.normalPositions.bind()
 		glEnableClientState(GL_NORMAL_ARRAY)
-		glNormalPointer(GL_FLOAT, 0, self.normalPositions);
+		glNormalPointer(GL_FLOAT, 0, self.normalPositions)
 
 		try:
-			glDrawArrays(GL_TRIANGLES, 0, len(self.vertices));
+			glDrawArrays(GL_TRIANGLES, 0, len(self.vertices))
 		except Exception as e:
-			print "Exception from drawarrays"
+			print("Exception from drawarrays")
 			pprint.pprint(e)
-			print "================================================================"
+			print("================================================================")
 				
 		self.SwapBuffers()
 		
@@ -377,131 +390,17 @@ class StlViewer(wx.Dialog):
 		self.gl.setOriginAtCenter(False)
 		self.gl.setStlObject(stlObj)
 		
-	def onCbSpin(self, evt):
+	def onCbSpin(self, _):
 		f = self.cbSpin.GetValue()
 		self.gl.setSpin(f)
 		self.settings.spinstlview = f
 		
-	def onLoad(self, evt):
+	def onLoad(self, _):
 		self.gl.setSpin(False)
 		self.gl.stopTimer()
 		self.EndModal(wx.ID_OK)
 		
-	def onDontLoad(self, evt):
+	def onDontLoad(self, _):
 		self.gl.setSpin(False)
 		self.gl.stopTimer()
 		self.EndModal(wx.ID_CANCEL)
-		
-
-def cross(v1,v2):
-	return [v1[1]*v2[2]-v1[2]*v2[1],v1[2]*v2[0]-v1[0]*v2[2],v1[0]*v2[1]-v1[1]*v2[0]]
-
-def genfacet(v):
-	veca=[v[1][0]-v[0][0],v[1][1]-v[0][1],v[1][2]-v[0][2]]
-	vecb=[v[2][0]-v[1][0],v[2][1]-v[1][1],v[2][2]-v[1][2]]
-	vecx=cross(veca,vecb)
-	vlen=math.sqrt(sum(map(lambda x:x*x,vecx)))
-	if vlen==0:
-		vlen=1
-	normal=map(lambda x:x/vlen, vecx)
-	return [normal,v]
-
-def is_ascii(s):
-	if not all(ord(c) < 128 for c in s):
-		return False
-	
-	return s.startswith("solid")	
-		
-class stl:
-	def __init__(self, filename=None, name=None):
-		self.facet=[[0,0,0],[[0,0,0],[0,0,0],[0,0,0]]]
-		self.facets=[]
-		
-		self.name=name
-		self.insolid=0
-		self.filename = filename
-		self.infacet=0
-		self.inloop=0
-		self.facetloc=0
-		if filename is not None:
-			self.f=list(open(filename))
-			if not is_ascii(self.f[0]):
-				f=open(filename,"rb")
-				buf=f.read(84)
-				while(len(buf)<84):
-					newdata=f.read(84-len(buf))
-					if not len(newdata):
-						break
-					buf+=newdata
-				facetcount=struct.unpack_from("<I",buf,80)
-				facetformat=struct.Struct("<ffffffffffffH")
-				for i in xrange(facetcount[0]):
-					buf=f.read(50)
-					while(len(buf)<50):
-						newdata=f.read(50-len(buf))
-						if not len(newdata):
-							break
-						buf+=newdata
-					fd=list(facetformat.unpack(buf))
-					self.facet=[fd[:3],[fd[3:6],fd[6:9],fd[9:12]]]
-					self.facets+=[self.facet]
-				f.close()
-			else:
-				for i in self.f:
-					self.parseline(i)
-					
-			for f in self.facets:
-				f[0] = genfacet(f[1])[0]
-
-			self.normalize()
-	
-	def normalize(self):
-		minz = 99999
-		maxx = -99999
-		minx = 99999
-		maxy = -99999
-		miny = 99999
-		for f in self.facets:
-			for i in range(3):
-				if f[1][i][0] < minx: minx = f[1][i][0]
-				if f[1][i][0] > maxx: maxx = f[1][i][0]
-				if f[1][i][1] < miny: miny = f[1][i][1]
-				if f[1][i][1] > maxy: maxy = f[1][i][1]
-				if f[1][i][2] < minz: minz = f[1][i][2]
-		xCenter = (minx+maxx)/2.0
-		yCenter = (miny+maxy)/2.0
-		
-		if xCenter != 0 or yCenter != 0:
-			for i in range(len(self.facets)):
-				for j in range(3):
-					self.facets[i][1][j][0] -= xCenter
-					self.facets[i][1][j][1] -= yCenter
-		if minz != 0:
-			for i in range(len(self.facets)):
-				for j in range(3):
-					self.facets[i][1][j][2] -= minz
-					
-				
-	def parseline(self,l):
-		l=l.strip()
-		if l.startswith("solid"):
-			self.insolid=1
-			
-		elif l.startswith("endsolid"):
-			self.insolid=0
-			return 0
-		elif l.startswith("facet normal"):
-			l=l.replace(",",".")
-			self.infacet=11
-			self.facetloc=0
-			self.facet=[[0,0,0],[[0,0,0],[0,0,0],[0,0,0]]]
-			self.facet[0]=map(float,l.split()[2:])
-		elif l.startswith("endfacet"):
-			self.infacet=0
-			self.facets+=[self.facet]
-			#facet=self.facet
-		elif l.startswith("vertex"):
-			l=l.replace(",",".")
-			self.facet[1][self.facetloc]=map(float,l.split()[1:])
-			self.facetloc+=1
-		return 1

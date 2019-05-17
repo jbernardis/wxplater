@@ -2,7 +2,9 @@ import wx
 import wx.lib.newevent
 import os
 import inspect
-import thread
+import threading
+import datetime
+import time
 
 cmdFolder = os.path.realpath(os.path.abspath(os.path.split(inspect.getfile( inspect.currentframe() ))[0]))
 
@@ -19,6 +21,8 @@ from translatedlg import TranslateDlg
 from scaledlg import ScaleDlg
 from gridparamsdlg import GridParamsDlg
 
+import numpy as np
+
 BUTTONDIM = (48, 48)
 
 class StlProxy:
@@ -31,19 +35,20 @@ cv = lambda x,y: ((x[0] == y[0]) or (x[0] == y[1]) or (x[0] == y[2]) or
 (SplitEvent, EVT_SPLIT_UPDATE) = wx.lib.newevent.NewEvent()
 SPLIT_NEXT_OBJECT = 1
 SPLIT_LAST_OBJECT = 2
+SPLIT_STATUS_MESSAGE = 9
 
-class SplitThread:
+class SplitThread (threading.Thread):
 	def __init__(self, win, obj):
+		threading.Thread.__init__(self)
 		self.win = win
 		self.obj = obj
 		self.ofl = [f for f in self.obj.facets]
+		self.nObjects = 0
+		self.statusMessage("splitting %d facets into separate objects" % len(self.ofl))
 		self.running = False
 
-	def Start(self):
+	def run(self):
 		self.running = True
-		thread.start_new_thread(self.Run, ())
-
-	def Run(self):
 		while self.running:
 			nf = self.nextObject()
 			if len(self.ofl) == 0:
@@ -51,22 +56,46 @@ class SplitThread:
 				self.running = False
 			else:
 				evt = SplitEvent(state = SPLIT_NEXT_OBJECT, facets=nf)
-			wx.PostEvent(self.win, evt)	
-		
+			wx.PostEvent(self.win, evt)
+
+	def statusMessage(self, msg):
+		ts = '{0:%Y-%m-%d %H:%M:%S}'.format(datetime.datetime.now())
+		evt = SplitEvent(state=SPLIT_STATUS_MESSAGE, msg="%s: %s" % (ts, msg))
+		wx.PostEvent(self.win, evt)
+
 	def nextObject(self):
+		# add the first facet to our new object and add its vertices to our vertex list
 		nf = [self.ofl.pop(0)]
-		fx = 0
-		while fx < len(nf):
-			nmatchf = []
+		vertices = np.array(nf[0][1])
+		t1 = time.time()
+		self.statusMessage("Isolating object %d from %d remaining facets" % (self.nObjects, len(self.ofl)))
+
+		# spin through all of the facets, adding them if they have a common vertex
+		while True:
+			facetsAdded = 0
+			nmatchf = [] # list of non-matching facets
 			for of in self.ofl:
-				if cv(nf[fx][1], of[1]):
+				if np.where((vertices == of[1][0]).all(axis=1))[0].size != 0 or \
+						np.where((vertices == of[1][1]).all(axis=1))[0].size != 0 or \
+						np.where((vertices == of[1][2]).all(axis=1))[0].size != 0:
+					# found a facet with at least 1 matching vertex - add to our list(s)
 					nf.append(of)
+					vertices = np.append(vertices, of[1], axis=0)
+					facetsAdded += 1
 				else:
+					# no matching vertices
 					nmatchf.append(of)
-			self.ofl = nmatchf
-			fx += 1
-		
+
+			self.ofl = nmatchf  # this is the list of remaining facets - we work off of this now
+
+			self.statusMessage("iteration added %d facets" % facetsAdded)
+			if facetsAdded == 0:
+				break
+
+		self.statusMessage("Object %d isolated in %d seconds" % (self.nObjects, int(time.time() - t1)))
+		self.nObjects += 1
 		return nf
+
 
 class PlaterDlg(wx.Frame):
 	def __init__(self):
@@ -80,7 +109,17 @@ class PlaterDlg(wx.Frame):
 		self.SetIcon(ico)
 		
 		self.savedfile = None
-		
+		self.part = 0
+		self.partfn = None
+		self.splitter = None
+
+		self.CreateStatusBar()
+		self.SetStatusText("")
+		self.statusMsgs = []
+		self.statusBarTimer = wx.Timer(self)
+		self.Bind(wx.EVT_TIMER, self.onStatusBarTimer, self.statusBarTimer)
+
+
 		self.Bind(wx.EVT_CLOSE, self.onClose)
 		self.Bind(EVT_SPLIT_UPDATE, self.splitUpdate)
 		
@@ -271,6 +310,26 @@ class PlaterDlg(wx.Frame):
 		self.SetSizer(szFrame)
 		self.Layout()
 		self.Fit()
+
+	def onStatusBarTimer(self, evt):
+		try:
+			self.SetStatusText(self.statusMsgs.pop(0))
+		except IndexError:
+			self.stopStatusBarTimer()
+			self.SetStatusText("")
+
+	def startStatusBarTimer(self):
+		self.statusBarTimer.Start(3000)
+
+	def stopStatusBarTimer(self):
+		self.statusBarTimer.Stop()
+
+	def updateStatus(self, msg):
+		if self.statusBarTimer.IsRunning():
+			self.statusMsgs.append(msg)
+		else:
+			self.SetStatusText(msg)
+			self.startStatusBarTimer()
 		
 	def enableButtons(self):
 		v = (self.files.countFiles() > 0)
@@ -309,19 +368,19 @@ class PlaterDlg(wx.Frame):
 		self.bSaveAs.Enable(False)
 		self.bViewPlate.Enable(False)
 		
-	def onScMargin(self, evt):
+	def onScMargin(self, _):
 		self.settings.arrangemargin = self.scMargin.GetValue()
 
-	def onCbPreview(self, evt):
+	def onCbPreview(self, _):
 		self.settings.preview = self.cbPreview.GetValue()
 		
 	def onStrategy(self, evt):
 		self.settings.arrangestrategy = self.strategyList[evt.GetInt()]
 
-	def onCbCenterOnArrange(self, evt):
+	def onCbCenterOnArrange(self, _):
 		self.settings.centeronarrange = self.cbCenterOnArrange.GetValue()
 
-	def doAdd(self, evt):
+	def doAdd(self, _):
 		wildcard = "STL (*.stl)|*.stl;*.STL|"	 \
 			"All files (*.*)|*.*"
 			
@@ -333,6 +392,7 @@ class PlaterDlg(wx.Frame):
 			style=wx.FD_OPEN)
 
 		rc = dlg.ShowModal()
+		path = None
 		if rc == wx.ID_OK:
 			path = dlg.GetPath().encode('ascii','ignore')
 		dlg.Destroy()
@@ -340,14 +400,14 @@ class PlaterDlg(wx.Frame):
 			return
 		
 		self.settings.lastdirectory = os.path.dirname(path)
-		
+
+		stlObj = stl(filename=path)
 		if self.settings.preview:
-			stlObj = stl(filename = path)
 			dlg = StlViewer(self, stlObj, path, True, self.images, self.settings)
 			rc = dlg.ShowModal()
 			dlg.Destroy()
-			dlg = None
-		
+			#dlg = None
+
 		if not self.settings.preview or rc == wx.ID_OK:
 			ud = UserData(path, stlObj, self.seq)
 			self.files.addFile(ud)
@@ -364,7 +424,7 @@ class PlaterDlg(wx.Frame):
 		self.stlCanvas.setSelection(seq)
 		self.enableButtons()
 		
-	def doClone(self, evt):
+	def doClone(self, _):
 		self.clone()
 		
 	def clone(self):
@@ -384,7 +444,7 @@ class PlaterDlg(wx.Frame):
 		self.enableButtons()
 		return mySeq
 		
-	def doDel(self, evt):
+	def doDel(self, _):
 		fx = self.files.getSelectionIndex()
 		if fx == wx.NOT_FOUND:
 			return
@@ -402,7 +462,7 @@ class PlaterDlg(wx.Frame):
 
 		self.enableButtons()
 		
-	def doDelall(self, evt):
+	def doDelall(self, _):
 		dlg = wx.MessageDialog(self,
 			"This will delete ALL items.\nAre you sure you want to do this?",
 			"Confirm Delete All",
@@ -416,38 +476,38 @@ class PlaterDlg(wx.Frame):
 			self.seq = 0
 			self.enableButtons()
 		
-	def doArrange(self, evt):
+	def doArrange(self, _):
 		self.stlCanvas.arrange()
 		self.modified = True
 		
 	def findUserDataBySeq(self, seq):
 		return self.files.findUserDataBySeq(seq)
 		
-	def doMirror(self, evt):
+	def doMirror(self, _):
 		dlg = MirrorDlg(self, self.stlCanvas, self.images, wx.GetMousePosition())
 		dlg.ShowModal()
 		dlg.Destroy()
 			
-	def doRotate(self, evt):
+	def doRotate(self, _):
 		dlg = RotateDlg(self, self.stlCanvas, self.images, wx.GetMousePosition())
 		dlg.ShowModal()
 		dlg.Destroy()
 			
-	def doTranslate(self, evt):
+	def doTranslate(self, _):
 		dlg = TranslateDlg(self, self.stlCanvas, self.images, wx.GetMousePosition())
 		dlg.ShowModal()
 		dlg.Destroy()
 			
-	def doScale(self, evt):
+	def doScale(self, _):
 		dlg = ScaleDlg(self, self.stlCanvas, self.images, wx.GetMousePosition())
 		dlg.ShowModal()
 		dlg.Destroy()
 		
-	def doCenter(self, evt):
+	def doCenter(self, _):
 		self.stlCanvas.centerPlate()
 		self.modified = True
 		
-	def doGrid(self, evt):
+	def doGrid(self, _):
 		ud = self.files.getSelection()
 		if ud is None:
 			return
@@ -455,6 +515,8 @@ class PlaterDlg(wx.Frame):
 		masterSeq = ud.getSeqNbr()
 		dlg = GridParamsDlg(self, self.images, wx.GetMousePosition())
 		rc = dlg.ShowModal()
+		rows = 0
+		cols = 0
 		if rc == wx.ID_OK:
 			rows, cols = dlg.getValues()
 			
@@ -474,7 +536,7 @@ class PlaterDlg(wx.Frame):
 			
 		self.stlCanvas.gridArrange(seqNbrs, rows, cols)
 		
-	def doSplit(self, evt):
+	def doSplit(self, _):
 		ud = self.files.getSelection()
 		if ud is None:
 			return
@@ -484,11 +546,16 @@ class PlaterDlg(wx.Frame):
 		self.part = 0
 		self.partfn = ud.getFn()
 		self.splitter = SplitThread(self, obj)
-		self.splitter.Start()
+		self.splitter.start()
 		
 	def splitUpdate(self, evt):
+		if evt.state == SPLIT_STATUS_MESSAGE:
+			self.updateStatus(evt.msg)
+			return
+
 		finished = False
 		if evt.state == SPLIT_LAST_OBJECT:
+			self.SetStatusText("")
 			finished = True
 			if self.part == 0:
 				dlg = wx.MessageDialog(self,
@@ -526,7 +593,7 @@ class PlaterDlg(wx.Frame):
 		else:
 			self.disableButtons()
 			
-	def doSaveAs(self, evt):
+	def doSaveAs(self, _):
 		wildcard = "STL (*.stl)|*.stl;*.STL"
 		dlg = wx.FileDialog(
 			self, message="Save file as ...", defaultDir=self.settings.lastdirectory, 
@@ -534,8 +601,9 @@ class PlaterDlg(wx.Frame):
 			)
 		
 		rc = dlg.ShowModal()
+		path = None
 		if rc == wx.ID_OK:
-			path = dlg.GetPath().encode('ascii','ignore')
+			path = dlg.GetPath().encode('ascii','ignore').decode()
 			if os.path.splitext(path)[1].lower() != ".stl":
 				path += ".stl"
 			
@@ -558,14 +626,12 @@ class PlaterDlg(wx.Frame):
 			"File '%s' written" % path,
 			"Save",
 			wx.OK | wx.ICON_INFORMATION)
-		
-		self.parent.exportStlFile(self.savedfile, self.settings.autoexport, self.settings.autoenqueue)
 
 		dlg.ShowModal()
 		dlg.Destroy()
 		self.enableButtons()
 
-	def doView(self, evt):
+	def doView(self, _):
 		self.viewObject()
 		
 	def viewObject(self):
@@ -575,7 +641,7 @@ class PlaterDlg(wx.Frame):
 		dlg.ShowModal()
 		dlg.Destroy()
 		
-	def doViewPlate(self, evt):
+	def doViewPlate(self, _):
 		self.stlCanvas.commitDeltas(None)
 		objs = self.files.getStlObjects()
 		
@@ -588,10 +654,10 @@ class PlaterDlg(wx.Frame):
 		dlg.Destroy()
 
 		
-	def doFileSelect(self, evt):
+	def doFileSelect(self, _):
 		self.enableButtons()
 			
-	def onClose(self, evt):
+	def onClose(self, _):
 		self.settings.save()
 		if self.modified:
 			dlg = wx.MessageDialog(self,
@@ -607,8 +673,8 @@ class PlaterDlg(wx.Frame):
 			
 class App(wx.App):
 	def OnInit(self):
-		self.frame = PlaterDlg()
-		self.SetTopWindow(self.frame)
+		frame = PlaterDlg()
+		self.SetTopWindow(frame)
 		return True
 
 app = App(False)
