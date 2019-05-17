@@ -399,7 +399,11 @@ class PlaterDlg(wx.Frame):
 		if rc != wx.ID_OK:
 			return
 		
-		self.settings.lastdirectory = os.path.dirname(path)
+		d = os.path.dirname(path)
+		try:
+			self.settings.lastdirectory = d.decode()
+		except AttributeError:
+			self.settings.lastdirectory = d
 
 		stlObj = stl(filename=path)
 		if self.settings.preview:
